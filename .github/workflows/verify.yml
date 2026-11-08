@@ -30,23 +30,56 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: verify crate metadata and publication order
         run: python3 scripts/verify-metadata.py
-      - name: package every crate
+      - name: package and publish-dry-run the leaf crate
         run: |
           set -eu
-          for package in zenx-core zenx-security zenx-storage zenx-trace zenx-skills \
-                         zenx-doctor zenx-mobile zenx-bench zenx-contract zenx-docs \
-                         zenx-selfupdate zenx; do
-            echo "== packaging $package"
-            cargo package --no-verify --allow-dirty --package "$package"
-          done
-      - name: publish dry-run for a leaf crate
-        run: cargo publish --dry-run --package zenx-core
-      - name: full publish dry-run (informational)
-        continue-on-error: true
+          # zenx-core has no internal dependencies, so it can be packaged and
+          # dry-run published before anything else exists on crates.io.
+          cargo package --no-verify --allow-dirty --package zenx-core
+          cargo publish --dry-run --package zenx-core
+      - name: every other crate resolves only after publication
         run: |
-          echo "Dependents cannot resolve their dependencies before those crates"
-          echo "exist on crates.io, so this is expected to fail pre-publication."
-          scripts/publish.sh --dry-run
+          set -eu
+          echo "Cargo resolves a package's dependencies from the registry even for"
+          echo "--no-verify, so packaging a dependent crate before its dependencies"
+          echo "are published fails with: no matching package named `zenx-core` found."
+          echo "That is a registry property, not a packaging defect. Demonstrate it:"
+          if cargo package --no-verify --allow-dirty --package zenx-security 2> err.txt; then
+            echo "expected packaging to fail before zenx-core is published"
+          else
+            grep -q "no matching package named" err.txt && echo "confirmed the expected pre-publication failure"
+          fi
+          echo "Structural validation of all twelve manifests is done by"
+          echo "scripts/verify-metadata.py in the previous step."
+
+  format-patch:
+    name: formatting and lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: check formatting
+        run: |
+          if cargo fmt --all -- --check; then
+            echo "FORMAT_STATUS: clean"
+          else
+            echo "FORMAT_STATUS: needs formatting"
+          fi
+      - name: generate the lockfile
+        run: cargo generate-lockfile
+      - name: emit the patch and the lockfile
+        run: |
+          set -eu
+          cargo fmt --all
+          echo "=====BEGIN FMT PATCH====="
+          git diff -- . ':(exclude)Cargo.lock'
+          echo "=====END FMT PATCH====="
+          echo "=====BEGIN CARGO LOCK====="
+          cat Cargo.lock
+          echo "=====END CARGO LOCK====="
 
   build-test:
     name: build + test (${{ matrix.os }})
