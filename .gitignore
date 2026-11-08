@@ -1,0 +1,8 @@
+/target
+**/*.rs.bk
+.dashboard-dist
+node_modules/
+*.db
+*.db-wal
+*.db-shm
+.zenx/
