@@ -57,7 +57,8 @@ pub fn is_within(base: &Path, candidate: &Path) -> bool {
 pub fn copy_dir(source: &Path, destination: &Path) -> Result<u64> {
     let mut copied = 0u64;
     for entry in WalkDir::new(source).follow_links(false) {
-        let entry = entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", source.display())))?;
+        let entry =
+            entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", source.display())))?;
         let relative = entry
             .path()
             .strip_prefix(source)
@@ -83,7 +84,8 @@ pub fn copy_dir(source: &Path, destination: &Path) -> Result<u64> {
 pub fn list_files(root: &Path) -> Result<Vec<String>> {
     let mut files = Vec::new();
     for entry in WalkDir::new(root).follow_links(false) {
-        let entry = entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", root.display())))?;
+        let entry =
+            entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", root.display())))?;
         if !entry.file_type().is_file() {
             continue;
         }

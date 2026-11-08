@@ -44,12 +44,24 @@ pub fn clone_shallow(url: &str, destination: &Path, rev: Option<&str>) -> Result
     match rev {
         Some(rev) => {
             run(
-                &["clone", "--depth", "1", "--branch", rev, "--", url, &destination_text],
+                &[
+                    "clone",
+                    "--depth",
+                    "1",
+                    "--branch",
+                    rev,
+                    "--",
+                    url,
+                    &destination_text,
+                ],
                 None,
             )?;
         }
         None => {
-            run(&["clone", "--depth", "1", "--", url, &destination_text], None)?;
+            run(
+                &["clone", "--depth", "1", "--", url, &destination_text],
+                None,
+            )?;
         }
     }
     Ok(())

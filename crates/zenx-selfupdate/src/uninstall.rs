@@ -121,11 +121,8 @@ mod tests {
     use super::*;
 
     fn fixture(tag: &str) -> PathBuf {
-        let root = std::env::temp_dir().join(format!(
-            "zenx-uninstall-{}-{}",
-            std::process::id(),
-            tag
-        ));
+        let root =
+            std::env::temp_dir().join(format!("zenx-uninstall-{}-{}", std::process::id(), tag));
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(&root).unwrap();
         root

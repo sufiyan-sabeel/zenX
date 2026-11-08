@@ -265,7 +265,10 @@ mod tests {
         let bytes = b"archive contents";
         let hash = sha256_hex(bytes);
         let checksums = vec![("zenx-x.tar.gz".to_string(), hash.clone())];
-        assert_eq!(verify_archive(bytes, "zenx-x.tar.gz", &checksums).unwrap(), hash);
+        assert_eq!(
+            verify_archive(bytes, "zenx-x.tar.gz", &checksums).unwrap(),
+            hash
+        );
 
         let wrong = vec![("zenx-x.tar.gz".to_string(), "0".repeat(64))];
         let error = verify_archive(bytes, "zenx-x.tar.gz", &wrong).unwrap_err();
@@ -293,7 +296,10 @@ mod tests {
             "https-evil://x",
         ] {
             let error = fetch(url).unwrap_err();
-            assert!(matches!(error, ZenxError::Security(_)), "{url} was not refused");
+            assert!(
+                matches!(error, ZenxError::Security(_)),
+                "{url} was not refused"
+            );
         }
     }
 }
