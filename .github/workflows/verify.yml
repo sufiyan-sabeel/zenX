@@ -111,6 +111,12 @@ jobs:
         run: |
           echo "### ${{ matrix.os }} test results" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+          if [ ! -f test-output.log ]; then
+            echo "  no test run: the build or lint step failed first" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "tests did not run"
+            exit 0
+          fi
           grep -E "^test result:|running [0-9]+ tests|^failures:" test-output.log \
             | sed 's/^/  /' >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -345,7 +351,6 @@ jobs:
           ./install.ps1 -Dir "$env:RUNNER_TEMP\bin"
           if (-not (Test-Path "$env:RUNNER_TEMP\bin\zenx.exe.old")) { throw "no backup was kept" }
           ./install.ps1 -Dir "$env:RUNNER_TEMP\bin" -Rollback
-          & "$env:RUNNER_TEMP\bin\zenx.exe" --version"
           & "$env:RUNNER_TEMP\bin\zenx.exe" --version
 
   android-arm64:

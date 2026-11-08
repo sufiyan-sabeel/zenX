@@ -125,7 +125,7 @@ mod tests {
     fn io_errors_keep_the_path() {
         let error = ZenxError::io(
             "/tmp/x",
-            std::io::Error::new(std::io::ErrorKind::Other, "nope"),
+            std::io::Error::other("nope"),
         );
         let text = error.to_string();
         assert!(text.contains("/tmp/x"));
