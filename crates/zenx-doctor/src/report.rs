@@ -166,15 +166,19 @@ mod tests {
     use super::*;
 
     fn sample() -> DoctorReport {
+        let checks = vec![
+            Check::new("docs.readme", "README present", Status::Pass, "ok".into()),
+            Check::new("ci.present", "CI present", Status::Fail, "missing".into()),
+        ];
+        // The summary is derived from the checks, exactly as `diagnose` does it;
+        // hard-coding a zero summary would make `is_healthy` lie about its input.
+        let summary = Summary::from_checks(&checks);
         DoctorReport {
             root: "/repo".into(),
             generated_at: "2026-01-01T00:00:00Z".into(),
             ecosystems: vec!["rust".into()],
-            checks: vec![
-                Check::new("docs.readme", "README present", Status::Pass, "ok".into()),
-                Check::new("ci.present", "CI present", Status::Fail, "missing".into()),
-            ],
-            summary: Summary::default(),
+            checks,
+            summary,
             fixes: Vec::new(),
         }
     }
@@ -191,8 +195,16 @@ mod tests {
     fn health_requires_no_failures() {
         let mut report = sample();
         assert!(!report.is_healthy());
+        assert_eq!(report.summary.fail, 1);
+        assert_eq!(report.failures().len(), 1);
+
+        // A warning is not a failure: recompute the summary the way diagnose
+        // would and health must flip without any failure remaining.
         report.checks[1].status = Status::Warn;
+        report.summary = Summary::from_checks(&report.checks);
         assert!(report.is_healthy());
+        assert_eq!(report.summary.fail, 0);
+        assert_eq!(report.summary.warn, 1);
     }
 
     #[test]
