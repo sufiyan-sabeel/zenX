@@ -323,8 +323,18 @@ fn mobile_diagnose_always_answers() {
 fn every_command_and_subcommand_help_is_valid() {
     let home = temp_home("help-all");
     for command in [
-        "init", "status", "config", "trace", "skills", "doctor", "mobile", "bench", "contract",
-        "docs", "update", "uninstall",
+        "init",
+        "status",
+        "config",
+        "trace",
+        "skills",
+        "doctor",
+        "mobile",
+        "bench",
+        "contract",
+        "docs",
+        "update",
+        "uninstall",
     ] {
         let output = run(&home, &[command, "--help"]);
         assert!(
