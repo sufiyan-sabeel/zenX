@@ -75,9 +75,41 @@ jobs:
           name: dist-${{ matrix.target }}
           path: dist/*
 
+  verify-installer:
+    name: install from the built artifacts
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: assemble the download directory
+        run: |
+          set -eu
+          mkdir -p dist
+          cp artifacts/dist-x86_64-unknown-linux-gnu/*.tar.gz dist/
+          ( cd dist && sha256sum *.tar.gz > SHA256SUMS.txt )
+      - name: install with the shipped script
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/bin"
+          "$RUNNER_TEMP/bin/zenx" --version
+      - name: the installed binary verifies an update from the same artifacts
+        run: |
+          set -eu
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/bin/zenx" init
+          # --version skips the "is it newer" gate, so this exercises the real
+          # download + SHA-256 verification path without replacing the binary.
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" ZENX_HOME="$RUNNER_TEMP/home" \
+            "$RUNNER_TEMP/bin/zenx" update --version v9.9.9 --dry-run --output json \
+            > "$RUNNER_TEMP/update.json"
+          grep -q '"verified": true' "$RUNNER_TEMP/update.json"
+          grep -q '"action": "verified"' "$RUNNER_TEMP/update.json"
+
   release:
     name: publish release
-    needs: build
+    needs: [build, verify-installer]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -87,6 +119,7 @@ jobs:
         run: |
           mkdir -p dist
           find artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' \) -exec cp {} dist/ \;
+          cp install.sh install.ps1 dist/
           cd dist && sha256sum * > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
@@ -96,7 +129,12 @@ jobs:
             zenX ${{ github.ref_name }}
 
             Every archive below was built by this workflow from the tagged commit.
-            Verify the download with `sha256sum -c SHA256SUMS.txt` before installing.
+            Verify the download with `sha256sum -c SHA256SUMS.txt` before installing,
+            or let the installer do it for you:
+
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh | sh
+            ```
 
             Install on Linux or Termux:
 

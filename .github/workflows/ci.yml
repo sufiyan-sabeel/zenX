@@ -75,6 +75,67 @@ jobs:
           name: zenx-aarch64-unknown-linux-gnu
           path: target/aarch64-unknown-linux-gnu/release/zenx
 
+  cargo-install:
+    name: cargo install from the workspace
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: install the binary the way cargo does
+        run: cargo install --path crates/zenx-cli --locked --root "$RUNNER_TEMP/zenx-root"
+      - name: the installed binary works
+        run: |
+          "$RUNNER_TEMP/zenx-root/bin/zenx" --version
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/zenx-root/bin/zenx" init --output json
+
+  installer:
+    name: installer script against a real artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: shellcheck
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck install.sh scripts/*.sh
+      - name: build a release-shaped archive
+        run: |
+          set -eu
+          cargo build --release --bin zenx
+          name="zenx-x86_64-unknown-linux-gnu"
+          mkdir -p "dist/$name"
+          cp target/release/zenx "dist/$name/"
+          cp README.md LICENSE "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          ( cd dist && sha256sum "$name.tar.gz" > SHA256SUMS.txt )
+      - name: install through the script and run the result
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/bin"
+          "$RUNNER_TEMP/bin/zenx" --version
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/bin/zenx" init
+      - name: the script refuses an unverifiable download
+        run: |
+          set -eu
+          rm -f dist/SHA256SUMS.txt
+          rm -rf "$RUNNER_TEMP/refused"
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/refused"; then
+            echo "installer accepted a release with no checksums" >&2
+            exit 1
+          fi
+          test ! -f "$RUNNER_TEMP/refused/zenx"
+      - name: the script refuses a bad checksum
+        run: |
+          set -eu
+          printf '%064d  zenx-x86_64-unknown-linux-gnu.tar.gz\n' 0 > dist/SHA256SUMS.txt
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/refused2"; then
+            echo "installer accepted a mismatched checksum" >&2
+            exit 1
+          fi
+          test ! -f "$RUNNER_TEMP/refused2/zenx"
+
   docs-commands:
     name: documented commands resolve
     runs-on: ubuntu-latest
