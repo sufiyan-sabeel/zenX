@@ -36,7 +36,8 @@ impl Db {
     fn prepare(conn: Connection) -> Result<Self> {
         // WAL keeps readers from blocking writers; in-memory databases ignore it.
         let _ = conn.execute_batch("PRAGMA journal_mode = WAL;");
-        conn.execute_batch("PRAGMA foreign_keys = ON;").map_err(map_err)?;
+        conn.execute_batch("PRAGMA foreign_keys = ON;")
+            .map_err(map_err)?;
         conn.busy_timeout(std::time::Duration::from_secs(5))
             .map_err(map_err)?;
         let mut db = Db { conn };
@@ -87,7 +88,9 @@ impl Db {
             return Err(ZenxError::Storage(format!("unknown table {table:?}")));
         }
         self.conn
-            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| row.get(0))
+            .query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |row| {
+                row.get(0)
+            })
             .map_err(map_err)
     }
 }
@@ -109,7 +112,10 @@ mod tests {
     #[test]
     fn migrations_create_every_table() {
         let db = Db::open_in_memory().unwrap();
-        assert_eq!(db.schema_version().unwrap(), schema::MIGRATIONS.len() as i64);
+        assert_eq!(
+            db.schema_version().unwrap(),
+            schema::MIGRATIONS.len() as i64
+        );
         for table in schema::TABLES {
             assert_eq!(db.count(table).unwrap(), 0, "{table} should be empty");
         }
@@ -120,7 +126,10 @@ mod tests {
         let mut db = Db::open_in_memory().unwrap();
         db.migrate().unwrap();
         db.migrate().unwrap();
-        assert_eq!(db.schema_version().unwrap(), schema::MIGRATIONS.len() as i64);
+        assert_eq!(
+            db.schema_version().unwrap(),
+            schema::MIGRATIONS.len() as i64
+        );
     }
 
     #[test]

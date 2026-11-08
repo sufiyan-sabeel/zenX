@@ -58,7 +58,12 @@ pub fn render_markdown(detail: &SessionDetail) -> String {
 }
 
 /// Write a session to `out` in the requested format.
-pub fn export_session(db: &Db, session_id: &str, format: ExportFormat, out: &Path) -> Result<usize> {
+pub fn export_session(
+    db: &Db,
+    session_id: &str,
+    format: ExportFormat,
+    out: &Path,
+) -> Result<usize> {
     let detail = get_session(db, session_id)?;
     let text = match format {
         ExportFormat::Json => serde_json::to_string_pretty(&detail)

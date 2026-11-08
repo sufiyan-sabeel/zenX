@@ -33,9 +33,8 @@ impl TraceAdapter for GenericJsonl {
     }
 
     fn parse_line(&self, line: &str) -> Result<Vec<EventInput>> {
-        let event: EventInput = serde_json::from_str(line).map_err(|e| {
-            zenx_core::ZenxError::Invalid(format!("not a zenX JSONL event: {e}"))
-        })?;
+        let event: EventInput = serde_json::from_str(line)
+            .map_err(|e| zenx_core::ZenxError::Invalid(format!("not a zenX JSONL event: {e}")))?;
         Ok(vec![event])
     }
 }
@@ -46,7 +45,9 @@ pub fn adapters() -> Vec<Box<dyn TraceAdapter>> {
 }
 
 pub fn adapter_by_name(name: &str) -> Option<Box<dyn TraceAdapter>> {
-    adapters().into_iter().find(|adapter| adapter.name() == name)
+    adapters()
+        .into_iter()
+        .find(|adapter| adapter.name() == name)
 }
 
 #[cfg(test)]

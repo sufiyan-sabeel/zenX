@@ -15,7 +15,10 @@ fn split_front_matter(content: &str) -> Result<(&str, &str)> {
     let rest = content
         .strip_prefix("---")
         .ok_or_else(|| ZenxError::Invalid("SKILL.md must start with --- front matter".into()))?;
-    let rest = rest.strip_prefix("\r\n").or_else(|| rest.strip_prefix('\n')).unwrap_or(rest);
+    let rest = rest
+        .strip_prefix("\r\n")
+        .or_else(|| rest.strip_prefix('\n'))
+        .unwrap_or(rest);
 
     let mut search_from = 0usize;
     while let Some(position) = rest[search_from..].find("\n---") {

@@ -147,7 +147,8 @@ fn copy_skill_tree(source: &Path, destination: &Path) -> Result<u64> {
         .into_iter()
         .filter_entry(|entry| entry.file_name() != OsStr::new(".git"));
     for entry in walker {
-        let entry = entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", source.display())))?;
+        let entry =
+            entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", source.display())))?;
         let relative = entry
             .path()
             .strip_prefix(source)
@@ -512,7 +513,13 @@ impl<'a> SkillsManager<'a> {
             .into_iter()
             .filter(|path| path.as_str() != MANIFEST_FILE)
             .collect();
-        let mut updated = Manifest::build(&meta, &manifest.source, new_commit.clone(), new_checksum.clone(), files);
+        let mut updated = Manifest::build(
+            &meta,
+            &manifest.source,
+            new_commit.clone(),
+            new_checksum.clone(),
+            files,
+        );
         updated.linked_targets = manifest.linked_targets.clone();
         updated.write(&directory)?;
         self.record(&updated)?;
@@ -566,7 +573,9 @@ impl<'a> SkillsManager<'a> {
     pub fn remove(&self, name: &str) -> Result<RemoveReport> {
         let target = self.store().join(name);
         if !target.is_dir() {
-            return Err(ZenxError::NotFound(format!("skill {name} is not installed")));
+            return Err(ZenxError::NotFound(format!(
+                "skill {name} is not installed"
+            )));
         }
         if !target.join(MANIFEST_FILE).is_file() {
             return Err(ZenxError::Security(format!(
@@ -657,11 +666,8 @@ mod tests {
 
     impl Fixture {
         fn new(tag: &str) -> Fixture {
-            let root = std::env::temp_dir().join(format!(
-                "zenx-skills-{}-{}",
-                std::process::id(),
-                tag
-            ));
+            let root =
+                std::env::temp_dir().join(format!("zenx-skills-{}-{}", std::process::id(), tag));
             let _ = std::fs::remove_dir_all(&root);
             std::fs::create_dir_all(&root).unwrap();
             let paths = ZenxPaths::new(root.join("home"));
@@ -675,7 +681,9 @@ mod tests {
             std::fs::create_dir_all(directory.join("scripts")).unwrap();
             std::fs::write(
                 directory.join("SKILL.md"),
-                format!("---\nname: {name}\ndescription: test skill\nversion: 1.0.0\n---\n\n{body}\n"),
+                format!(
+                    "---\nname: {name}\ndescription: test skill\nversion: 1.0.0\n---\n\n{body}\n"
+                ),
             )
             .unwrap();
             std::fs::write(directory.join("scripts/run.sh"), "echo hi\n").unwrap();
@@ -723,10 +731,14 @@ mod tests {
         let source = fixture.write_skill("demo", "hello");
         let manager = SkillsManager::new(&fixture.db, &fixture.paths);
         manager
-            .install(&InstallRequest::new(SkillSource::Local { path: source.clone() }))
+            .install(&InstallRequest::new(SkillSource::Local {
+                path: source.clone(),
+            }))
             .unwrap();
         let error = manager
-            .install(&InstallRequest::new(SkillSource::Local { path: source.clone() }))
+            .install(&InstallRequest::new(SkillSource::Local {
+                path: source.clone(),
+            }))
             .unwrap_err();
         assert!(matches!(error, ZenxError::Invalid(_)));
 
@@ -780,7 +792,9 @@ mod tests {
         let source = fixture.write_skill("demo", "hello");
         let manager = SkillsManager::new(&fixture.db, &fixture.paths);
         manager
-            .install(&InstallRequest::new(SkillSource::Local { path: source.clone() }))
+            .install(&InstallRequest::new(SkillSource::Local {
+                path: source.clone(),
+            }))
             .unwrap();
 
         // Replace with an edited copy so a backup exists.
@@ -792,10 +806,7 @@ mod tests {
         let mut request = InstallRequest::new(SkillSource::Local { path: source });
         request.force = true;
         manager.install(&request).unwrap();
-        assert_eq!(
-            manager.list().unwrap()[0].version.as_deref(),
-            Some("2.0.0")
-        );
+        assert_eq!(manager.list().unwrap()[0].version.as_deref(), Some("2.0.0"));
 
         let restored = manager.rollback("demo").unwrap();
         assert_eq!(restored.version.as_deref(), Some("1.0.0"));

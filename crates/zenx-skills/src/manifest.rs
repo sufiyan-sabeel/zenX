@@ -86,9 +86,19 @@ mod tests {
     fn manifest_round_trips_through_disk() {
         let dir = std::env::temp_dir().join(format!("zenx-manifest-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(dir.join("SKILL.md"), "---\nname: demo\ndescription: d\n---\n").unwrap();
+        std::fs::write(
+            dir.join("SKILL.md"),
+            "---\nname: demo\ndescription: d\n---\n",
+        )
+        .unwrap();
         let checksum = Manifest::current_checksum(&dir).unwrap();
-        let manifest = Manifest::build(&meta(), "local:/tmp/demo", None, checksum, vec!["SKILL.md".into()]);
+        let manifest = Manifest::build(
+            &meta(),
+            "local:/tmp/demo",
+            None,
+            checksum,
+            vec!["SKILL.md".into()],
+        );
         manifest.write(&dir).unwrap();
         let read = Manifest::read(&dir).unwrap();
         assert_eq!(read, manifest);
@@ -98,7 +108,8 @@ mod tests {
 
     #[test]
     fn missing_manifest_is_an_io_error() {
-        let dir = std::env::temp_dir().join(format!("zenx-manifest-missing-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("zenx-manifest-missing-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         assert!(Manifest::read(&dir).is_err());
         let _ = std::fs::remove_dir_all(&dir);
