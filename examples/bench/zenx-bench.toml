@@ -1,0 +1,27 @@
+# Benchmark tasks for zenX Bench.
+#
+# `command` is an argument vector, never a shell string: zenX starts the program
+# directly, so nothing here is interpreted by a shell.
+
+[[task]]
+id = "version-prints"
+title = "zenx --version exits cleanly"
+command = ["zenx", "--version"]
+timeout_secs = 30
+expect_exit = 0
+expect_stdout_contains = "zenx"
+
+[[task]]
+id = "help-lists-trace"
+title = "zenx --help mentions the trace module"
+command = ["zenx", "--help"]
+timeout_secs = 30
+expect_exit = 0
+expect_stdout_contains = "trace"
+
+[[task]]
+id = "doctor-json-shape"
+title = "zenx doctor emits JSON"
+command = ["zenx", "doctor", ".", "--output", "json"]
+timeout_secs = 120
+expect_stdout_contains = "\"checks\""
