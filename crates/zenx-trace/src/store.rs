@@ -23,7 +23,13 @@ pub fn create_session(db: &Db, agent: &str, cwd: &Path, label: Option<&str>) -> 
         .execute(
             "INSERT INTO sessions (id, agent, label, cwd, status, started_at, metadata)
              VALUES (?1, ?2, ?3, ?4, 'running', ?5, '{}')",
-            params![&id, agent, label, cwd.to_string_lossy().to_string(), now_rfc3339()],
+            params![
+                &id,
+                agent,
+                label,
+                cwd.to_string_lossy().to_string(),
+                now_rfc3339()
+            ],
         )
         .map_err(map_err)?;
     Ok(id)
@@ -57,12 +63,7 @@ pub fn finish_session(db: &Db, session_id: &str, status: &str) -> Result<()> {
 }
 
 /// Append one event. Payloads are redacted when `redact` is set.
-pub fn append_event(
-    db: &Db,
-    session_id: &str,
-    input: &EventInput,
-    redact: bool,
-) -> Result<i64> {
+pub fn append_event(db: &Db, session_id: &str, input: &EventInput, redact: bool) -> Result<i64> {
     if !session_exists(db, session_id)? {
         return Err(ZenxError::NotFound(format!("session {session_id}")));
     }
@@ -374,7 +375,12 @@ mod tests {
     fn invalid_kind_is_rejected() {
         let db = db();
         let id = create_session(&db, "codex", Path::new("/repo"), None).unwrap();
-        let error = append_event(&db, &id, &EventInput::new(EventKind::Custom, "x").with_status("ok"), true);
+        let error = append_event(
+            &db,
+            &id,
+            &EventInput::new(EventKind::Custom, "x").with_status("ok"),
+            true,
+        );
         assert!(error.is_ok());
         let mut bad = EventInput::new(EventKind::Message, "x");
         bad.kind = "teleport".to_string();
@@ -444,6 +450,9 @@ mod tests {
             )
             .unwrap();
         assert_eq!(prune_sessions(&db, 30).unwrap(), 1);
-        assert_eq!(list_sessions(&db, &SessionFilter::default()).unwrap().len(), 1);
+        assert_eq!(
+            list_sessions(&db, &SessionFilter::default()).unwrap().len(),
+            1
+        );
     }
 }
