@@ -127,21 +127,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: install the package the way a user would
-        run: cargo install --path crates/zenx-cli --locked --root "$RUNNER_TEMP/root"
+        run: cargo install --path crates/zenx-cli --locked
       - name: the installed binary is named zenx and runs
         run: |
           set -eu
-          test -x "$RUNNER_TEMP/root/bin/zenx"
-          "$RUNNER_TEMP/root/bin/zenx" --version
-          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/root/bin/zenx" init --output json
-          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/root/bin/zenx" status --output json
+          BIN="${CARGO_HOME:-$HOME/.cargo}/bin/zenx"
+          test -x "$BIN"
+          "$BIN" --version
+          ZENX_HOME="$RUNNER_TEMP/home" "$BIN" init --output json
+          ZENX_HOME="$RUNNER_TEMP/home" "$BIN" status --output json
       - name: a cargo install is reported as cargo-managed
         run: |
           set -eu
-          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/root/bin/zenx" update --output json \
-            > update.json || true
+          BIN="${CARGO_HOME:-$HOME/.cargo}/bin/zenx"
+          ZENX_HOME="$RUNNER_TEMP/home" "$BIN" update --output json > update.json
           cat update.json
-          grep -q '"method"' update.json
+          grep -q '"method": "cargo"' update.json
+          grep -q '"action": "manual"' update.json
 
   installer:
     name: installer scenarios
@@ -170,23 +172,23 @@ jobs:
       - name: valid checksum installs and runs
         run: |
           set -eu
-          ZENX_RELEASE_BASE_URL="file://$PWD/dist-v1" ./install.sh --dir "$RUNNER_TEMP/bin"
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist-v1" sh ./install.sh --dir "$RUNNER_TEMP/bin"
           "$RUNNER_TEMP/bin/zenx" --version
           ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/bin/zenx" init
       - name: existing installation is replaced and kept as .old
         run: |
           set -eu
-          ZENX_RELEASE_BASE_URL="file://$PWD/dist-v2" ./install.sh --dir "$RUNNER_TEMP/bin"
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist-v2" sh ./install.sh --dir "$RUNNER_TEMP/bin"
           test -x "$RUNNER_TEMP/bin/zenx.old"
       - name: rollback restores the previous binary
         run: |
           set -eu
-          ./install.sh --dir "$RUNNER_TEMP/bin" --rollback
+          sh ./install.sh --dir "$RUNNER_TEMP/bin" --rollback
           "$RUNNER_TEMP/bin/zenx" --version
       - name: rollback without a backup fails
         run: |
           set -eu
-          if ./install.sh --dir "$RUNNER_TEMP/empty" --rollback; then
+          if sh ./install.sh --dir "$RUNNER_TEMP/empty" --rollback; then
             echo "rollback succeeded without a backup" >&2
             exit 1
           fi
@@ -195,7 +197,7 @@ jobs:
           set -eu
           cp -r dist-v1 dist-nosum && rm -f dist-nosum/SHA256SUMS.txt
           rm -rf "$RUNNER_TEMP/refused"
-          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-nosum" ./install.sh --dir "$RUNNER_TEMP/refused"; then
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-nosum" sh ./install.sh --dir "$RUNNER_TEMP/refused"; then
             echo "installer accepted a release with no checksums" >&2
             exit 1
           fi
@@ -206,7 +208,7 @@ jobs:
           cp -r dist-v1 dist-badsum
           printf '%064d  zenx-x86_64-unknown-linux-gnu.tar.gz\n' 0 > dist-badsum/SHA256SUMS.txt
           rm -rf "$RUNNER_TEMP/refused2"
-          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-badsum" ./install.sh --dir "$RUNNER_TEMP/refused2"; then
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-badsum" sh ./install.sh --dir "$RUNNER_TEMP/refused2"; then
             echo "installer accepted a mismatched checksum" >&2
             exit 1
           fi
@@ -217,7 +219,7 @@ jobs:
           mkdir -p fakebin
           printf '#!/bin/sh\necho mips64\n' > fakebin/uname
           chmod +x fakebin/uname
-          if PATH="$PWD/fakebin:$PATH" ./install.sh --dir "$RUNNER_TEMP/arch"; then
+          if PATH="$PWD/fakebin:$PATH" sh ./install.sh --dir "$RUNNER_TEMP/arch"; then
             echo "installer accepted an unsupported architecture" >&2
             exit 1
           fi
@@ -338,7 +340,12 @@ jobs:
       - name: rollback restores the previous binary
         shell: pwsh
         run: |
+          # Install once more so a .old file exists, then roll back to it.
+          $env:ZENX_RELEASE_BASE_URL = "$PWD/dist"
+          ./install.ps1 -Dir "$env:RUNNER_TEMP\bin"
+          if (-not (Test-Path "$env:RUNNER_TEMP\bin\zenx.exe.old")) { throw "no backup was kept" }
           ./install.ps1 -Dir "$env:RUNNER_TEMP\bin" -Rollback
+          & "$env:RUNNER_TEMP\bin\zenx.exe" --version"
           & "$env:RUNNER_TEMP\bin\zenx.exe" --version
 
   android-arm64:

@@ -599,9 +599,7 @@ impl<'a> SkillsManager<'a> {
     fn backup(&self, source: &Path, name: &str, reason: &str) -> Result<PathBuf> {
         let root = self.backup_root();
         std::fs::create_dir_all(&root).map_err(|e| ZenxError::io(&root, e))?;
-        let stamp = zenx_core::util::now_rfc3339()
-            .replace(':', "")
-            .replace('-', "");
+        let stamp = zenx_core::util::now_rfc3339().replace([':', '-'], "");
         let mut destination = root.join(format!("{name}-{stamp}"));
         let mut counter = 1;
         while destination.exists() {

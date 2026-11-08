@@ -55,8 +55,12 @@ If the previous binary is replaced, the old one is kept as `zenx.old` next to it
 Put it back with:
 
 ```bash
-./install.sh --rollback          # or: install.sh --dir <path> --rollback
+sh install.sh --rollback          # or: sh install.sh --dir <path> --rollback
 ```
+
+If you cloned the repository rather than piping the script into a shell, run it
+with `sh` — the file mode is not guaranteed to be executable depending on how it
+was obtained.
 
 Windows uses a PowerShell installer instead — see
 [installation-windows.md](installation-windows.md).

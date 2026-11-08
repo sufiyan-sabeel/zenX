@@ -145,14 +145,14 @@ fn probe(name: &str) -> Option<String> {
 pub fn detect_tools() -> Vec<ToolStatus> {
     TOOLS
         .iter()
-        .map(|(name, required, hint)| {
+        .map(|&(name, required, hint)| {
             let version = probe(name);
             ToolStatus {
-                name: *name,
-                required: *required,
+                name,
+                required,
                 found: version.is_some(),
                 version,
-                hint: *hint,
+                hint,
             }
         })
         .collect()
@@ -227,9 +227,7 @@ pub fn diagnose() -> DiagnosticReport {
 }
 
 fn stamp() -> String {
-    zenx_core::util::now_rfc3339()
-        .replace(':', "")
-        .replace('-', "")
+    zenx_core::util::now_rfc3339().replace([':', '-'], "")
 }
 
 #[derive(Serialize, serde::Deserialize)]

@@ -93,7 +93,7 @@ jobs:
       - name: install with the shipped script
         run: |
           set -eu
-          ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/bin"
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" sh ./install.sh --dir "$RUNNER_TEMP/bin"
           "$RUNNER_TEMP/bin/zenx" --version
       - name: the installed binary verifies an update from the same artifacts
         run: |
