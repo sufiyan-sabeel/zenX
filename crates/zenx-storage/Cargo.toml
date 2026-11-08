@@ -1,0 +1,14 @@
+[package]
+name = "zenx-storage"
+description = "SQLite-backed local-first storage for zenX"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+zenx-core.workspace = true
+rusqlite.workspace = true
+chrono.workspace = true
