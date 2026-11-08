@@ -41,6 +41,9 @@ curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh
 
 # write the PATH line into your shell profile for you
 curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh | sh -s -- --set-path
+
+# restore the binary saved by the previous install
+curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh | sh -s -- --rollback
 ```
 
 Where it installs:
@@ -49,6 +52,11 @@ Where it installs:
 - **Everything else:** `~/.local/bin`, which you may need to add to `PATH`.
 
 If the previous binary is replaced, the old one is kept as `zenx.old` next to it.
+Put it back with:
+
+```bash
+./install.sh --rollback          # or: install.sh --dir <path> --rollback
+```
 
 Windows uses a PowerShell installer instead — see
 [installation-windows.md](installation-windows.md).

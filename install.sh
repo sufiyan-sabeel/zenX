@@ -11,6 +11,7 @@
 #   --version <tag>   install a specific release (e.g. v0.1.0)
 #   --dir <path>      install into this directory
 #   --set-path        append the install directory to your shell profile
+#   --rollback        restore the binary saved as zenx.old by the last install
 #   -h, --help        show this help
 #
 # Environment:
@@ -21,6 +22,7 @@ REPO="sufiyan-sabeel/zenX"
 VERSION=""
 INSTALL_DIR=""
 SET_PATH=0
+ROLLBACK=0
 
 usage() {
   cat <<'USAGE'
@@ -35,6 +37,7 @@ Options:
   --version <tag>   install a specific release (e.g. v0.1.0)
   --dir <path>      install into this directory
   --set-path        append the install directory to your shell profile
+  --rollback        restore the binary saved as zenx.old by the last install
   -h, --help        show this help
 
 Environment:
@@ -49,6 +52,7 @@ while [ $# -gt 0 ]; do
     --dir) INSTALL_DIR="${2:?--dir needs a value}"; shift 2 ;;
     --dir=*) INSTALL_DIR="${1#*=}"; shift ;;
     --set-path) SET_PATH=1; shift ;;
+    --rollback) ROLLBACK=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) printf 'zenx installer: unknown option %s\n' "$1" >&2; exit 2 ;;
   esac
@@ -109,6 +113,19 @@ if [ ! -w "$INSTALL_DIR" ]; then
   printf 'zenx installer: no write permission for %s\n' "$INSTALL_DIR" >&2
   printf 'Choose another directory with --dir <writable-dir>\n' >&2
   exit 1
+fi
+
+if [ "$ROLLBACK" -eq 1 ]; then
+  dest="${INSTALL_DIR}/zenx"
+  if [ ! -f "${dest}.old" ]; then
+    printf 'zenx installer: no previous binary at %s.old, nothing to roll back\n' "$dest" >&2
+    exit 1
+  fi
+  mv "${dest}.old" "$dest"
+  chmod 755 "$dest" 2>/dev/null || true
+  rolled="$("$dest" --version 2>/dev/null || true)"
+  printf 'zenx installer: rolled back to %s at %s\n' "${rolled:-the previous binary}" "$dest"
+  exit 0
 fi
 
 existing=""

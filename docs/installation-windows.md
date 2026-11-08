@@ -19,6 +19,7 @@ Installs to `%LOCALAPPDATA%\zenX\bin\zenx.exe`. Options:
 .\install.ps1 -Version v0.1.0
 .\install.ps1 -Dir C:\tools\zenx
 .\install.ps1 -SetPath     # append the directory to your user PATH
+.\install.ps1 -Rollback    # restore zenx.exe.old from the previous install
 ```
 
 `-SetPath` reads the user `Path` variable, checks whether the directory is

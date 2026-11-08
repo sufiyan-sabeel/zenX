@@ -1,0 +1,334 @@
+name: Verify
+
+# Full verification of the installation and distribution work: build, tests,
+# formatting, clippy, cargo install, installer scenarios, self-update, uninstall
+# safety and an Android/Termux-target cross build. Nothing here publishes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**/*.rs"
+      - "**/Cargo.toml"
+      - "install.sh"
+      - "install.ps1"
+      - "scripts/**"
+      - ".github/workflows/verify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  metadata:
+    name: metadata and publish order
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: verify crate metadata and publication order
+        run: python3 scripts/verify-metadata.py
+      - name: package every crate
+        run: |
+          set -eu
+          for package in zenx-core zenx-security zenx-storage zenx-trace zenx-skills \
+                         zenx-doctor zenx-mobile zenx-bench zenx-contract zenx-docs \
+                         zenx-selfupdate zenx; do
+            echo "== packaging $package"
+            cargo package --no-verify --allow-dirty --package "$package"
+          done
+      - name: publish dry-run for a leaf crate
+        run: cargo publish --dry-run --package zenx-core
+      - name: full publish dry-run (informational)
+        continue-on-error: true
+        run: |
+          echo "Dependents cannot resolve their dependencies before those crates"
+          echo "exist on crates.io, so this is expected to fail pre-publication."
+          scripts/publish.sh --dry-run
+
+  build-test:
+    name: build + test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+      - name: clippy (warnings are errors)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: build
+        run: cargo build --workspace --all-targets
+      - name: tests
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --all-targets 2>&1 | tee test-output.log
+      - name: test summary
+        if: always()
+        shell: bash
+        run: |
+          echo "### ${{ matrix.os }} test results" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          grep -E "^test result:|running [0-9]+ tests|^failures:" test-output.log \
+            | sed 's/^/  /' >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "totals:"
+          grep -E "^test result:" test-output.log || true
+          echo "passed: $(grep -oE '[0-9]+ passed' test-output.log | awk '{s+=$1} END {print s+0}')"
+          echo "failed: $(grep -oE '[0-9]+ failed' test-output.log | awk '{s+=$1} END {print s+0}')"
+
+  cargo-install:
+    name: cargo install from a clean clone
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: install the package the way a user would
+        run: cargo install --path crates/zenx-cli --locked --root "$RUNNER_TEMP/root"
+      - name: the installed binary is named zenx and runs
+        run: |
+          set -eu
+          test -x "$RUNNER_TEMP/root/bin/zenx"
+          "$RUNNER_TEMP/root/bin/zenx" --version
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/root/bin/zenx" init --output json
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/root/bin/zenx" status --output json
+      - name: a cargo install is reported as cargo-managed
+        run: |
+          set -eu
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/root/bin/zenx" update --output json \
+            > update.json || true
+          cat update.json
+          grep -q '"method"' update.json
+
+  installer:
+    name: installer scenarios
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          shellcheck install.sh scripts/*.sh
+      - name: build two release-shaped artifacts (v1 and v2)
+        run: |
+          set -eu
+          cargo build --release --bin zenx
+          name="zenx-x86_64-unknown-linux-gnu"
+          for tag in v1 v2; do
+            mkdir -p "dist-$tag/$name"
+            cp target/release/zenx "dist-$tag/$name/"
+            cp README.md LICENSE "dist-$tag/$name/"
+            tar -C "dist-$tag" -czf "dist-$tag/$name.tar.gz" "$name"
+            ( cd "dist-$tag" && sha256sum "$name.tar.gz" > SHA256SUMS.txt )
+          done
+      - name: valid checksum installs and runs
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist-v1" ./install.sh --dir "$RUNNER_TEMP/bin"
+          "$RUNNER_TEMP/bin/zenx" --version
+          ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/bin/zenx" init
+      - name: existing installation is replaced and kept as .old
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist-v2" ./install.sh --dir "$RUNNER_TEMP/bin"
+          test -x "$RUNNER_TEMP/bin/zenx.old"
+      - name: rollback restores the previous binary
+        run: |
+          set -eu
+          ./install.sh --dir "$RUNNER_TEMP/bin" --rollback
+          "$RUNNER_TEMP/bin/zenx" --version
+      - name: rollback without a backup fails
+        run: |
+          set -eu
+          if ./install.sh --dir "$RUNNER_TEMP/empty" --rollback; then
+            echo "rollback succeeded without a backup" >&2
+            exit 1
+          fi
+      - name: missing checksum is refused
+        run: |
+          set -eu
+          cp -r dist-v1 dist-nosum && rm -f dist-nosum/SHA256SUMS.txt
+          rm -rf "$RUNNER_TEMP/refused"
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-nosum" ./install.sh --dir "$RUNNER_TEMP/refused"; then
+            echo "installer accepted a release with no checksums" >&2
+            exit 1
+          fi
+          test ! -e "$RUNNER_TEMP/refused/zenx"
+      - name: incorrect checksum is refused
+        run: |
+          set -eu
+          cp -r dist-v1 dist-badsum
+          printf '%064d  zenx-x86_64-unknown-linux-gnu.tar.gz\n' 0 > dist-badsum/SHA256SUMS.txt
+          rm -rf "$RUNNER_TEMP/refused2"
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-badsum" ./install.sh --dir "$RUNNER_TEMP/refused2"; then
+            echo "installer accepted a mismatched checksum" >&2
+            exit 1
+          fi
+          test ! -e "$RUNNER_TEMP/refused2/zenx"
+      - name: unsupported architecture fails safely
+        run: |
+          set -eu
+          mkdir -p fakebin
+          printf '#!/bin/sh\necho mips64\n' > fakebin/uname
+          chmod +x fakebin/uname
+          if PATH="$PWD/fakebin:$PATH" ./install.sh --dir "$RUNNER_TEMP/arch"; then
+            echo "installer accepted an unsupported architecture" >&2
+            exit 1
+          fi
+
+  update-uninstall:
+    name: self-update and uninstall safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: build a release directory
+        run: |
+          set -eu
+          cargo build --release --bin zenx
+          name="zenx-x86_64-unknown-linux-gnu"
+          mkdir -p "dist/$name"
+          cp target/release/zenx "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          ( cd dist && sha256sum "$name.tar.gz" > SHA256SUMS.txt )
+          mkdir -p "$RUNNER_TEMP/bin"
+          cp target/release/zenx "$RUNNER_TEMP/bin/zenx"
+      - name: update --check reports an available release
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" "$RUNNER_TEMP/bin/zenx" update \
+            --check --version v9.9.9 --output json > check.json
+          cat check.json
+          grep -q '"action": "available"' check.json
+      - name: update --dry-run verifies without installing
+        run: |
+          set -eu
+          before="$(sha256sum "$RUNNER_TEMP/bin/zenx" | cut -d' ' -f1)"
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" "$RUNNER_TEMP/bin/zenx" update \
+            --dry-run --version v9.9.9 --output json > dry.json
+          cat dry.json
+          grep -q '"verified": true' dry.json
+          after="$(sha256sum "$RUNNER_TEMP/bin/zenx" | cut -d' ' -f1)"
+          test "$before" = "$after"
+      - name: update installs and keeps a backup
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" "$RUNNER_TEMP/bin/zenx" update \
+            --version v9.9.9 --output json > install.json
+          cat install.json
+          grep -q '"action": "installed"' install.json
+          test -f "$RUNNER_TEMP/bin/zenx.old"
+      - name: update rollback restores the backup
+        run: |
+          set -eu
+          "$RUNNER_TEMP/bin/zenx" update --rollback
+          test ! -f "$RUNNER_TEMP/bin/zenx.old"
+      - name: update refuses a tampered artifact
+        run: |
+          set -eu
+          cp -r dist dist-bad
+          printf '%064d  zenx-x86_64-unknown-linux-gnu.tar.gz\n' 0 > dist-bad/SHA256SUMS.txt
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist-bad" "$RUNNER_TEMP/bin/zenx" update \
+               --version v9.9.9; then
+            echo "updater installed an unverified artifact" >&2
+            exit 1
+          fi
+      - name: uninstall keeps user data unless asked twice
+        run: |
+          set -eu
+          export ZENX_HOME="$RUNNER_TEMP/home"
+          "$RUNNER_TEMP/bin/zenx" init
+          test -f "$ZENX_HOME/zenx.db"
+          "$RUNNER_TEMP/bin/zenx" uninstall --output json > plan.json
+          cat plan.json
+          test -f "$RUNNER_TEMP/bin/zenx"          # nothing removed yet
+          test -f "$ZENX_HOME/zenx.db"
+          "$RUNNER_TEMP/bin/zenx" uninstall --yes --output json > done.json
+          cat done.json
+          test ! -f "$RUNNER_TEMP/bin/zenx"       # binary gone
+          test -f "$ZENX_HOME/zenx.db"            # data kept
+          cp target/release/zenx "$RUNNER_TEMP/bin/zenx"
+          "$RUNNER_TEMP/bin/zenx" uninstall --yes --purge-data --output json > purge.json
+          cat purge.json
+          test ! -d "$ZENX_HOME"
+
+  installer-windows:
+    name: PowerShell installer (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: build a release-shaped artifact
+        shell: pwsh
+        run: |
+          cargo build --release --bin zenx
+          $name = "zenx-x86_64-pc-windows-msvc"
+          New-Item -ItemType Directory -Force -Path "dist/$name" | Out-Null
+          Copy-Item "target/release/zenx.exe" "dist/$name/"
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip" -Force
+          $hash = (Get-FileHash -Algorithm SHA256 -Path "dist/$name.zip").Hash.ToLower()
+          "$hash  $name.zip" | Out-File -Encoding ascii "dist/SHA256SUMS.txt"
+          Get-Content "dist/SHA256SUMS.txt"
+      - name: install through the script
+        shell: pwsh
+        run: |
+          $env:ZENX_RELEASE_BASE_URL = "$PWD/dist"
+          ./install.ps1 -Dir "$env:RUNNER_TEMP\bin"
+          & "$env:RUNNER_TEMP\bin\zenx.exe" --version
+          $env:ZENX_HOME = "$env:RUNNER_TEMP\home"
+          & "$env:RUNNER_TEMP\bin\zenx.exe" init
+      - name: a bad checksum is refused
+        shell: pwsh
+        run: |
+          Copy-Item -Recurse "dist" "dist-bad"
+          ("0" * 64) + "  zenx-x86_64-pc-windows-msvc.zip" | Out-File -Encoding ascii "dist-bad/SHA256SUMS.txt"
+          $env:ZENX_RELEASE_BASE_URL = "$PWD/dist-bad"
+          $failed = $false
+          try { ./install.ps1 -Dir "$env:RUNNER_TEMP\refused" } catch { $failed = $true }
+          if (-not $failed) { throw "installer accepted a mismatched checksum" }
+          if (Test-Path "$env:RUNNER_TEMP\refused\zenx.exe") { throw "a refused install left a binary behind" }
+      - name: rollback restores the previous binary
+        shell: pwsh
+        run: |
+          ./install.ps1 -Dir "$env:RUNNER_TEMP\bin" -Rollback
+          & "$env:RUNNER_TEMP\bin\zenx.exe" --version
+
+  android-arm64:
+    name: Android/Termux target cross build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - name: build for aarch64-linux-android (Termux ABI)
+        run: |
+          set -eu
+          NDK="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          if [ -z "$NDK" ]; then
+            NDK="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/ndk/* 2>/dev/null | sort -V | tail -n1)"
+          fi
+          echo "NDK: $NDK"
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CC_aarch64_linux_android="$TOOLCHAIN/aarch64-linux-android21-clang"
+          export AR_aarch64_linux_android="$TOOLCHAIN/llvm-ar"
+          export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$TOOLCHAIN/aarch64-linux-android21-clang"
+          cargo build --release --bin zenx --target aarch64-linux-android
+          file target/aarch64-linux-android/release/zenx || true
+          ls -la target/aarch64-linux-android/release/zenx

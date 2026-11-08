@@ -17,7 +17,8 @@
 param(
     [string]$Version = "",
     [string]$Dir = "",
-    [switch]$SetPath
+    [switch]$SetPath,
+    [switch]$Rollback
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,6 +35,9 @@ $asset = "zenx-$target.zip"
 
 if ($env:ZENX_RELEASE_BASE_URL) {
     $base = $env:ZENX_RELEASE_BASE_URL.TrimEnd('/')
+    if ($base -notmatch '^https?://' -and -not (Test-Path $base)) {
+        throw "ZENX_RELEASE_BASE_URL must be an http(s) URL or an existing directory: $base"
+    }
 } elseif ($Version) {
     $base = "https://github.com/$Repo/releases/download/$Version"
 } else {
@@ -43,6 +47,16 @@ if ($env:ZENX_RELEASE_BASE_URL) {
 if (-not $Dir) { $Dir = Join-Path $env:LOCALAPPDATA "zenX\bin" }
 New-Item -ItemType Directory -Force -Path $Dir | Out-Null
 
+if ($Rollback) {
+    $dest = Join-Path $Dir "zenx.exe"
+    if (-not (Test-Path "$dest.old")) {
+        throw "No previous binary at $dest.old, nothing to roll back"
+    }
+    Move-Item -Force "$dest.old" $dest
+    Write-Host "zenx installer: rolled back to $(& $dest --version) at $dest"
+    exit 0
+}
+
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("zenx-install-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
@@ -50,13 +64,28 @@ try {
     $archive = Join-Path $tmp $asset
     $sums = Join-Path $tmp "SHA256SUMS.txt"
 
+    function Get-ReleaseFile {
+        param([string]$Name, [string]$Destination, [switch]$Required)
+        $source = if ($base -match '^https?://') { "$base/$Name" } else { Join-Path $base $Name }
+        try {
+            if ($source -match '^https?://') {
+                Invoke-WebRequest -Uri $source -OutFile $Destination -UseBasicParsing
+            } else {
+                if (-not (Test-Path $source)) { throw "not found: $source" }
+                Copy-Item -LiteralPath $source -Destination $Destination -Force
+            }
+        } catch {
+            if ($Required) { throw }
+            return $false
+        }
+        return $true
+    }
+
     Write-Host "zenx installer: platform $target"
     Write-Host "zenx installer: downloading $asset"
-    Invoke-WebRequest -Uri "$base/$asset" -OutFile $archive -UseBasicParsing
+    Get-ReleaseFile -Name $asset -Destination $archive -Required | Out-Null
 
-    try {
-        Invoke-WebRequest -Uri "$base/SHA256SUMS.txt" -OutFile $sums -UseBasicParsing
-    } catch {
+    if (-not (Get-ReleaseFile -Name "SHA256SUMS.txt" -Destination $sums)) {
         throw "Refusing to install: this release publishes no SHA256SUMS.txt. An unverifiable download is never installed."
     }
 
