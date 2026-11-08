@@ -258,6 +258,10 @@ pub fn backup(paths: &ZenxPaths, destination: &Path) -> Result<BackupReport> {
 
     if paths.skills_dir().is_dir() {
         let target = backup_dir.join("skills");
+        // Create the destination explicitly: copy_dir writes nothing for an
+        // empty tree, and a manifest entry must never describe a path the
+        // backup does not actually contain.
+        std::fs::create_dir_all(&target).map_err(|e| ZenxError::io(&target, e))?;
         copy_dir(&paths.skills_dir(), &target)?;
         entries.push("skills/".to_string());
     }
@@ -418,8 +422,15 @@ mod tests {
         assert!(restored.restored.is_empty());
         assert!(!restored.skipped.is_empty());
         let restored = restore(&paths, Path::new(&report.path), true).unwrap();
-        assert!(restored.restored.contains(&"config.toml".to_string()));
-        assert!(restored.skipped.is_empty());
+        assert!(
+            restored.restored.contains(&"config.toml".to_string()),
+            "config.toml was not restored: {restored:?}"
+        );
+        assert!(
+            restored.skipped.is_empty(),
+            "nothing should be skipped with overwrite enabled, but: {:?}",
+            restored.skipped
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 
