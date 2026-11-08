@@ -178,7 +178,7 @@ else
   exit 1
 fi
 
-if [ "$(printf '%s' "$actual" | tr 'A-Z' 'a-z')" != "$(printf '%s' "$expected" | tr 'A-Z' 'a-z')" ]; then
+if [ "$(printf '%s' "$actual" | tr '[:upper:]' '[:lower:]')" != "$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]')" ]; then
   printf 'zenx installer: checksum mismatch, refusing to install\n' >&2
   printf '  published: %s\n  downloaded: %s\n' "$expected" "$actual" >&2
   exit 1
@@ -228,6 +228,8 @@ case ":${PATH}:" in
       fi
     else
       printf 'zenx installer: %s is not on PATH yet\n' "$INSTALL_DIR"
+      # The literal $PATH is intentional: this line is meant to be copied into a shell.
+      # shellcheck disable=SC2016
       printf '  export PATH="%s:$PATH"\n' "$INSTALL_DIR"
       printf '  or rerun with --set-path to write that line for you\n'
     fi

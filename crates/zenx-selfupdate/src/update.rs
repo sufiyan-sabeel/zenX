@@ -205,7 +205,7 @@ pub fn update(options: &UpdateOptions) -> Result<UpdateReport> {
 
     if options.check_only {
         return Ok(UpdateReport {
-            current_version,
+            current_version: current_version.clone(),
             target_version: target_version.clone(),
             method,
             action: UpdateAction::Available,

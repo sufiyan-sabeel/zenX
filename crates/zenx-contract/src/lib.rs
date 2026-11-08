@@ -553,7 +553,7 @@ paths:
         let base = load_spec(&write("rm-a", BASE)).unwrap();
         let head = load_spec(&write(
             "rm-b",
-            BASE.replace("  /pets/{id}:\n    delete:\n      responses:\n        \"204\":\n          description: deleted\n", ""),
+            &BASE.replace("  /pets/{id}:\n    delete:\n      responses:\n        \"204\":\n          description: deleted\n", ""),
         ))
         .unwrap();
         let comparison = compare(&base, &head);
@@ -567,7 +567,7 @@ paths:
         let base = load_spec(&write("req-a", BASE)).unwrap();
         let head = load_spec(&write(
             "req-b",
-            BASE.replace(
+            &BASE.replace(
                 "        - name: limit\n          in: query\n          required: false",
                 "        - name: limit\n          in: query\n          required: true",
             ),
@@ -583,7 +583,7 @@ paths:
         let base = load_spec(&write("resp-a", BASE)).unwrap();
         let head = load_spec(&write(
             "resp-b",
-            BASE.replace("type: array", "type: object"),
+            &BASE.replace("type: array", "type: object"),
         ))
         .unwrap();
         let comparison = compare(&base, &head);
@@ -617,7 +617,7 @@ paths:
     #[test]
     fn markdown_report_lists_changes() {
         let base = load_spec(&write("md-a", BASE)).unwrap();
-        let head = load_spec(&write("md-b", BASE.replace("type: array", "type: object"))).unwrap();
+        let head = load_spec(&write("md-b", &BASE.replace("type: array", "type: object"))).unwrap();
         let comparison = compare(&base, &head);
         let text = comparison.render_markdown("base.yaml", "head.yaml");
         assert!(text.contains("# API compatibility report"));
