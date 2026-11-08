@@ -6,7 +6,35 @@ All notable changes to zenX are recorded here. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- `install.sh` at the repository root, usable as
+  `curl -fsSL .../install.sh | sh`. Detects OS and architecture, refuses
+  unsupported platforms, verifies the archive against the release's
+  `SHA256SUMS.txt` before extracting, keeps the previous binary as `zenx.old`,
+  and can write an idempotent `PATH` line with `--set-path`.
+- `install.ps1` for Windows: same fail-closed checksum verification through
+  `Get-FileHash`, installs to `%LOCALAPPDATA%\zenX\bin`, optional `-SetPath`.
+- `zenx update` with `--check`, `--version`, `--dry-run` and `--rollback`.
+  Downloads only over HTTPS, verifies SHA-256 before unpacking, replaces only a
+  file named `zenx`, and defers to cargo when zenX was installed with cargo.
+- `zenx uninstall`, which reports its plan first, deletes only the zenX
+  executable, and needs `--purge-data --yes` before touching user data.
+- The CLI package is now named `zenx` (directory unchanged) with the metadata
+  crates.io requires, and internal dependencies carry versions so the whole
+  workspace is publishable.
+- `scripts/publish.sh`, which publishes the twelve crates in dependency order
+  and supports `--dry-run`.
+- CI jobs that run `cargo install --path crates/zenx-cli`, shellcheck the
+  installers, install through `install.sh` from a locally built artifact, and
+  assert that an unverifiable download is refused. The release workflow now
+  verifies the installer against the real artifacts before publishing.
+- Installation documentation: `docs/installation.md` and per-platform guides for
+  Linux, macOS, Windows and Termux.
+
+### Changed
+
+- `docs/INSTALL.md` and `docs/TERMUX.md` were replaced by the guides above.
 
 ## [0.1.0]
 

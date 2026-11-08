@@ -124,3 +124,23 @@ zenx docs add <directory> [--collection C] [--version V]
 zenx docs list
 zenx docs remove <collection> [--version V]
 ```
+
+## Update and uninstall
+
+```
+zenx update [--check] [--version TAG] [--dry-run] [--rollback]
+zenx uninstall [--yes] [--purge-data]
+```
+
+`zenx update` reads the latest GitHub release, downloads the archive for this
+platform, verifies it against `SHA256SUMS.txt`, and only then replaces the
+binary, keeping the previous copy as `zenx.old`. `--check` reports whether a
+newer release exists; `--dry-run` downloads and verifies without installing;
+`--rollback` restores `zenx.old`.
+
+If zenX was installed with Cargo, the updater does not touch the binary — cargo
+owns it — and instead prints the `cargo install` command to run.
+
+`zenx uninstall` prints what it would remove. With `--yes` it deletes the
+executable, and only if that file is named `zenx`. Data in the zenX home
+directory is kept unless you also pass `--purge-data --yes`.

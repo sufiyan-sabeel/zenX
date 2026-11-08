@@ -17,6 +17,19 @@ release. Nothing here is advertised in the CLI until it is implemented.
 - Bench: measured runs, history, comparison with regression detection.
 - Contract: OpenAPI 3 JSON/YAML parsing, breaking-change classification.
 - Docs: import, ranked offline search, collection management.
+- Installation lifecycle: `install.sh` (checksum-verified, fails closed),
+  `install.ps1` for Windows, `zenx update` with `--check`/`--dry-run`/
+  `--rollback`, and `zenx uninstall` that never deletes data without explicit
+  confirmation.
+
+## Next: 0.1.1 — publish to crates.io
+
+- `cargo publish` all twelve crates in dependency order (`scripts/publish.sh`),
+  so `cargo install zenx` works as documented.
+- Run the installer job on a `windows-latest` runner, then remove the
+  "unverified on Windows" caveat from `docs/installation-windows.md`.
+- Tag `v0.1.0` so the first release artifacts and `SHA256SUMS.txt` exist, which
+  is what both installers and `zenx update` require.
 
 ## Next: 0.2.0 — the dashboard
 
@@ -38,7 +51,10 @@ release. Nothing here is advertised in the CLI until it is implemented.
 
 ## Later
 
-- Self-update with checksum verification, replacing the install script.
+- Homebrew formula and a Scoop manifest, so macOS and Windows users have a
+  package-manager path.
+- Signing and notarisation for the macOS binaries, which currently trip
+  Gatekeeper when downloaded manually.
 - Distributed benchmark runs with a shared result file for comparison.
 - Plugin loading through a stable out-of-process protocol rather than a C ABI.
 - GraphQL and gRPC contract comparison beyond OpenAPI.

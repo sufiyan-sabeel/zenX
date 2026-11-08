@@ -32,22 +32,29 @@ otherwise.
 ## Install
 
 Prebuilt binaries are published for Linux (x86_64, aarch64), macOS (Intel and
-Apple Silicon) and Windows:
+Apple Silicon) and Windows (x86_64). The installer verifies the download against
+the release's `SHA256SUMS.txt` before unpacking anything:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh | sh
 ```
 
-From source (any platform with a Rust toolchain):
+On Windows, use the PowerShell installer instead:
+
+```powershell
+irm https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.ps1 | iex
+```
+
+Or build with Cargo — from the repository, until the crate is published:
 
 ```bash
-cargo build --release
-install -m 755 target/release/zenx ~/.local/bin/zenx
+cargo install --git https://github.com/sufiyan-sabeel/zenX zenx
 ```
 
-Android/Termux needs `pkg install rust clang git` first — SQLite is compiled from
-source by the bundled `rusqlite` feature, which needs a C compiler. See
-[docs/TERMUX.md](docs/TERMUX.md).
+`cargo install zenx` is the intended final form; the crate name is reserved for
+it but **the package is not on crates.io yet**, so that command does not work
+today. Android/Termux needs `pkg install rust clang git` first, because SQLite is
+compiled from source. Full instructions: [docs/installation.md](docs/installation.md).
 
 ## Quick start
 
@@ -74,6 +81,9 @@ zenx docs search release
 
 # 6. check an API for breaking changes (exit code 1 when breaking)
 zenx contract compare examples/contracts/base.yaml examples/contracts/head.yaml
+
+# 7. keep the binary current
+zenx update --check
 ```
 
 Every command accepts `--output json` for automation. JSON mode writes exactly
@@ -114,8 +124,11 @@ already exists.
 
 ## Documentation
 
-- [Installation](docs/INSTALL.md)
-- [Android and Termux](docs/TERMUX.md)
+- [Installation](docs/installation.md) — installer and Cargo, verification, PATH, uninstall
+- [Linux](docs/installation-linux.md)
+- [macOS](docs/installation-macos.md)
+- [Windows](docs/installation-windows.md)
+- [Android and Termux](docs/installation-termux.md)
 - [CLI reference](docs/CLI.md)
 - [Module guide](docs/MODULES.md)
 - [Configuration](docs/CONFIGURATION.md)
@@ -139,10 +152,12 @@ subcommand mentioned in the documentation exists in the binary.
 ## Project status
 
 Version 0.1.0. Implemented and covered by tests: core engine, storage,
-security primitives, and all seven modules listed above. Not implemented: the
-React dashboard, agent adapters beyond zenX's own JSONL format, and
-self-update. These are listed as planned in [docs/ROADMAP.md](docs/ROADMAP.md)
-and are absent from the CLI rather than stubbed.
+security primitives, all seven modules listed above, plus the installation
+lifecycle — `install.sh`, `install.ps1`, `zenx update` (checksum-verified, with
+`--rollback`) and `zenx uninstall`. Not implemented: the React dashboard, agent
+adapters beyond zenX's own JSONL format, and publication to crates.io. Those are
+listed in [docs/ROADMAP.md](docs/ROADMAP.md); the dashboard has no command at
+all rather than a stub.
 
 ## License
 

@@ -3,8 +3,9 @@
 ## Shape
 
 ```
-zenx-cli  ──▶ zenx-trace, zenx-skills, zenx-doctor, zenx-mobile,
-              zenx-bench, zenx-contract, zenx-docs
+zenx  ──▶ zenx-trace, zenx-skills, zenx-doctor, zenx-mobile,
+(crates/  zenx-bench, zenx-contract, zenx-docs, zenx-selfupdate
+ zenx-cli)
                      │
                      ├──▶ zenx-core        (errors, config, paths, output, logging)
                      ├──▶ zenx-storage     (SQLite, migrations)
