@@ -4,7 +4,7 @@
 //! are no placeholder subcommands: a capability that is not implemented simply
 //! has no command, and `zenx status` reports it as planned.
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, ValueEnum};
 use zenx_core::output::{OutputFormat, Reporter};
 use zenx_core::Result;
 

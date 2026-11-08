@@ -1,5 +1,4 @@
 use clap::Args;
-use serde_json::json;
 use zenx_core::Result;
 use zenx_selfupdate::{uninstall, UninstallOptions};
 
