@@ -1,0 +1,18 @@
+[package]
+name = "zenx-skills"
+description = "Universal agent skills manager: install, verify, update, roll back"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+zenx-core.workspace = true
+zenx-storage.workspace = true
+zenx-security.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+walkdir.workspace = true
