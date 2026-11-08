@@ -141,7 +141,7 @@ already exists.
 ## Development
 
 ```bash
-./scripts/dev-check.sh    # rustfmt, clippy -D warnings, tests, doc-command check
+bash scripts/dev-check.sh    # rustfmt, clippy -D warnings, tests, doc-command check
 cargo test --workspace --all-targets
 ```
 

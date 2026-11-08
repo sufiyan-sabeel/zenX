@@ -13,6 +13,6 @@ echo "== tests"
 cargo test --workspace --all-targets
 
 echo "== documented commands"
-./scripts/check-docs-commands.sh
+bash scripts/check-docs-commands.sh
 
 echo "all checks passed"

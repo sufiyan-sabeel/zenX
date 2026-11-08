@@ -24,7 +24,7 @@ it is worth reading before you open a pull request.
 git clone https://github.com/sufiyan-sabeel/zenX
 cd zenX
 cargo build
-./scripts/dev-check.sh
+bash scripts/dev-check.sh
 ```
 
 `dev-check.sh` runs exactly what CI runs: `cargo fmt --check`, `clippy -D

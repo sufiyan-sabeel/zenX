@@ -113,7 +113,7 @@ jobs:
       - name: install through the script and run the result
         run: |
           set -eu
-          ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/bin"
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" sh ./install.sh --dir "$RUNNER_TEMP/bin"
           "$RUNNER_TEMP/bin/zenx" --version
           ZENX_HOME="$RUNNER_TEMP/home" "$RUNNER_TEMP/bin/zenx" init
       - name: the script refuses an unverifiable download
@@ -121,7 +121,7 @@ jobs:
           set -eu
           rm -f dist/SHA256SUMS.txt
           rm -rf "$RUNNER_TEMP/refused"
-          if ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/refused"; then
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist" sh ./install.sh --dir "$RUNNER_TEMP/refused"; then
             echo "installer accepted a release with no checksums" >&2
             exit 1
           fi
@@ -130,7 +130,7 @@ jobs:
         run: |
           set -eu
           printf '%064d  zenx-x86_64-unknown-linux-gnu.tar.gz\n' 0 > dist/SHA256SUMS.txt
-          if ZENX_RELEASE_BASE_URL="file://$PWD/dist" ./install.sh --dir "$RUNNER_TEMP/refused2"; then
+          if ZENX_RELEASE_BASE_URL="file://$PWD/dist" sh ./install.sh --dir "$RUNNER_TEMP/refused2"; then
             echo "installer accepted a mismatched checksum" >&2
             exit 1
           fi
@@ -145,4 +145,4 @@ jobs:
       - name: build
         run: cargo build --release
       - name: check every command in the docs against the binary
-        run: ./scripts/check-docs-commands.sh
+        run: bash scripts/check-docs-commands.sh
