@@ -13,6 +13,8 @@ pub mod mobile;
 pub mod skills;
 pub mod status;
 pub mod trace;
+pub mod uninstall;
+pub mod update;
 
 /// The complete zenX command surface.
 ///
@@ -39,13 +41,17 @@ pub enum Command {
     Contract(contract::ContractArgs),
     /// Import and search offline documentation
     Docs(docs::DocsArgs),
+    /// Check for, download and install a newer release
+    Update(update::UpdateArgs),
+    /// Remove the zenX executable, keeping user data unless asked otherwise
+    Uninstall(uninstall::UninstallArgs),
 }
 
 /// Command names, used to validate documented commands in `zenx doctor`.
 pub fn command_names() -> Vec<String> {
     [
         "init", "status", "config", "trace", "skills", "doctor", "mobile", "bench", "contract",
-        "docs",
+        "docs", "update", "uninstall",
     ]
     .iter()
     .map(|name| name.to_string())
@@ -64,5 +70,7 @@ pub fn dispatch(command: &Command, output: Option<OutputArg>, no_color: bool) ->
         Command::Bench(args) => bench::run(args, output, no_color),
         Command::Contract(args) => contract::run(args, output, no_color),
         Command::Docs(args) => docs::run(args, output, no_color),
+        Command::Update(args) => update::run(args, output, no_color),
+        Command::Uninstall(args) => uninstall::run(args, output, no_color),
     }
 }

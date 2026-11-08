@@ -11,6 +11,7 @@ members = [
     "crates/zenx-bench",
     "crates/zenx-contract",
     "crates/zenx-docs",
+    "crates/zenx-selfupdate",
     "crates/zenx-cli",
 ]
 
@@ -21,18 +22,20 @@ rust-version = "1.75"
 license = "Apache-2.0"
 repository = "https://github.com/sufiyan-sabeel/zenX"
 authors = ["Umaiz Sufiyan"]
+homepage = "https://github.com/sufiyan-sabeel/zenX"
 
 [workspace.dependencies]
-zenx-core = { path = "crates/zenx-core" }
-zenx-storage = { path = "crates/zenx-storage" }
-zenx-security = { path = "crates/zenx-security" }
-zenx-trace = { path = "crates/zenx-trace" }
-zenx-skills = { path = "crates/zenx-skills" }
-zenx-doctor = { path = "crates/zenx-doctor" }
-zenx-mobile = { path = "crates/zenx-mobile" }
-zenx-bench = { path = "crates/zenx-bench" }
-zenx-contract = { path = "crates/zenx-contract" }
-zenx-docs = { path = "crates/zenx-docs" }
+zenx-core = { path = "crates/zenx-core", version = "0.1.0" }
+zenx-storage = { path = "crates/zenx-storage", version = "0.1.0" }
+zenx-security = { path = "crates/zenx-security", version = "0.1.0" }
+zenx-trace = { path = "crates/zenx-trace", version = "0.1.0" }
+zenx-skills = { path = "crates/zenx-skills", version = "0.1.0" }
+zenx-doctor = { path = "crates/zenx-doctor", version = "0.1.0" }
+zenx-mobile = { path = "crates/zenx-mobile", version = "0.1.0" }
+zenx-bench = { path = "crates/zenx-bench", version = "0.1.0" }
+zenx-contract = { path = "crates/zenx-contract", version = "0.1.0" }
+zenx-docs = { path = "crates/zenx-docs", version = "0.1.0" }
+zenx-selfupdate = { path = "crates/zenx-selfupdate", version = "0.1.0" }
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

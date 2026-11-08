@@ -1,6 +1,9 @@
 [package]
-name = "zenx-cli"
-description = "The zenX command line interface"
+name = "zenx"
+description = "Local-first developer infrastructure platform: agent tracing, skill management, repository diagnostics, Termux tooling, benchmarking, API contract checks and offline documentation"
+documentation = "https://github.com/sufiyan-sabeel/zenX/tree/main/docs"
+keywords = ["cli", "developer-tools", "ai-agents", "termux", "observability"]
+categories = ["command-line-utilities", "development-tools"]
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -23,6 +26,7 @@ zenx-mobile.workspace = true
 zenx-bench.workspace = true
 zenx-contract.workspace = true
 zenx-docs.workspace = true
+zenx-selfupdate.workspace = true
 clap.workspace = true
 serde.workspace = true
 serde_json.workspace = true
