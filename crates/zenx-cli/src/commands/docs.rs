@@ -88,7 +88,10 @@ pub fn run(args: &DocsArgs, output: Option<OutputArg>, no_color: bool) -> Result
                 reporter.note("import some with: zenx docs add <directory>");
                 return Ok(0);
             }
-            reporter.line(format!("{:<24} {:<12} {:>6}  {}", "COLLECTION", "VERSION", "DOCS", "SOURCE"));
+            reporter.line(format!(
+                "{:<24} {:<12} {:>6}  {}",
+                "COLLECTION", "VERSION", "DOCS", "SOURCE"
+            ));
             for collection in &collections {
                 reporter.line(format!(
                     "{:<24} {:<12} {:>6}  {}",
@@ -153,13 +156,7 @@ fn search_and_print(
     version: Option<String>,
     limit: usize,
 ) -> Result<u8> {
-    let hits = search(
-        db,
-        query,
-        collection.as_deref(),
-        version.as_deref(),
-        limit,
-    )?;
+    let hits = search(db, query, collection.as_deref(), version.as_deref(), limit)?;
     if reporter.is_json() {
         reporter.json(&json!({ "query": query, "hits": hits }))?;
         return Ok(0);

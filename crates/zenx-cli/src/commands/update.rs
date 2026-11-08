@@ -32,7 +32,10 @@ pub fn run(args: &UpdateArgs, output: Option<OutputArg>, no_color: bool) -> Resu
         if reporter.is_json() {
             reporter.json(&json!({ "ok": true, "restored": restored.display().to_string() }))?;
         } else {
-            reporter.line(format!("restored the previous binary at {}", restored.display()));
+            reporter.line(format!(
+                "restored the previous binary at {}",
+                restored.display()
+            ));
         }
         return Ok(0);
     }

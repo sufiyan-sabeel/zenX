@@ -68,7 +68,11 @@ pub fn run(args: &StatusArgs, output: Option<OutputArg>, no_color: bool) -> Resu
     reporter.line(format!("zenX home      {}", report.home));
     reporter.line(format!(
         "initialised    {}",
-        if report.initialised { "yes" } else { "no — run `zenx init`" }
+        if report.initialised {
+            "yes"
+        } else {
+            "no — run `zenx init`"
+        }
     ));
     reporter.line(format!("config version {}", report.config_version));
     reporter.line(format!("output format  {}", report.output_format));
@@ -100,7 +104,10 @@ pub fn run(args: &StatusArgs, output: Option<OutputArg>, no_color: bool) -> Resu
             zenx_core::module::ModuleStatus::Partial => "partial    ",
             zenx_core::module::ModuleStatus::Planned => "planned    ",
         };
-        reporter.line(format!("  {status}  {:<14} {}", module.name, module.summary));
+        reporter.line(format!(
+            "  {status}  {:<14} {}",
+            module.name, module.summary
+        ));
     }
     Ok(0)
 }

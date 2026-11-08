@@ -19,7 +19,9 @@ pub struct UninstallArgs {
 pub fn run(args: &UninstallArgs, output: Option<OutputArg>, no_color: bool) -> Result<u8> {
     let reporter = crate::reporter_for(output, no_color)?;
     if args.purge_data && !args.yes {
-        reporter.note("--purge-data needs --yes as well: it deletes configuration, sessions and skills");
+        reporter.note(
+            "--purge-data needs --yes as well: it deletes configuration, sessions and skills",
+        );
     }
 
     let report = uninstall(&UninstallOptions {

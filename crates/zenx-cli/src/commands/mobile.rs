@@ -45,13 +45,19 @@ pub fn run(args: &MobileArgs, output: Option<OutputArg>, no_color: bool) -> Resu
                 return Ok(0);
             }
             let environment = &report.environment;
-            reporter.line(format!("os           {} ({})", environment.os, environment.arch));
+            reporter.line(format!(
+                "os           {} ({})",
+                environment.os, environment.arch
+            ));
             reporter.line(format!(
                 "termux       {}",
                 if environment.termux {
                     format!(
                         "yes ({})",
-                        environment.termux_version.as_deref().unwrap_or("version unknown")
+                        environment
+                            .termux_version
+                            .as_deref()
+                            .unwrap_or("version unknown")
                     )
                 } else {
                     "no".to_string()
@@ -65,7 +71,10 @@ pub fn run(args: &MobileArgs, output: Option<OutputArg>, no_color: bool) -> Resu
                     (false, _) => "no".to_string(),
                 }
             ));
-            reporter.line(format!("home         {}", environment.home.as_deref().unwrap_or("-")));
+            reporter.line(format!(
+                "home         {}",
+                environment.home.as_deref().unwrap_or("-")
+            ));
 
             reporter.heading("toolchains");
             for tool in &report.tools {

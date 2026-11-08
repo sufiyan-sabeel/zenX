@@ -117,7 +117,10 @@ pub fn run(args: &SkillsArgs, output: Option<OutputArg>, no_color: bool) -> Resu
             if report.dry_run {
                 reporter.line(format!("dry run: would install {}", report.name));
                 reporter.line(format!("  source    {}", report.source));
-                reporter.line(format!("  version   {}", report.version.as_deref().unwrap_or("-")));
+                reporter.line(format!(
+                    "  version   {}",
+                    report.version.as_deref().unwrap_or("-")
+                ));
                 reporter.line(format!("  files     {}", report.files));
                 reporter.line(format!("  checksum  {}", report.checksum_sha256));
                 reporter.line(format!("  target    {}", report.path));
@@ -147,7 +150,10 @@ pub fn run(args: &SkillsArgs, output: Option<OutputArg>, no_color: bool) -> Resu
                 return Ok(0);
             }
             if report.ok {
-                reporter.line(format!("{} is intact ({})", report.name, report.expected_checksum));
+                reporter.line(format!(
+                    "{} is intact ({})",
+                    report.name, report.expected_checksum
+                ));
                 return Ok(0);
             }
             reporter.line(format!("{} has changed since install:", report.name));

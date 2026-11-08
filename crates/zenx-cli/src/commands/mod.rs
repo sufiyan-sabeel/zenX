@@ -50,8 +50,18 @@ pub enum Command {
 /// Command names, used to validate documented commands in `zenx doctor`.
 pub fn command_names() -> Vec<String> {
     [
-        "init", "status", "config", "trace", "skills", "doctor", "mobile", "bench", "contract",
-        "docs", "update", "uninstall",
+        "init",
+        "status",
+        "config",
+        "trace",
+        "skills",
+        "doctor",
+        "mobile",
+        "bench",
+        "contract",
+        "docs",
+        "update",
+        "uninstall",
     ]
     .iter()
     .map(|name| name.to_string())

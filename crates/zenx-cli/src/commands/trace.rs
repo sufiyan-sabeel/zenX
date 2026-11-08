@@ -107,9 +107,7 @@ pub enum TraceCommand {
     /// List the transcript adapters this build implements
     Adapters,
     /// Delete one session
-    Delete {
-        session: String,
-    },
+    Delete { session: String },
 }
 
 pub fn run(args: &TraceArgs, output: Option<OutputArg>, no_color: bool) -> Result<u8> {
@@ -297,9 +295,13 @@ pub fn run(args: &TraceArgs, output: Option<OutputArg>, no_color: bool) -> Resul
                     "skipped": skipped,
                 }))?;
             } else {
-                reporter.line(format!("session {session_id}: recorded {imported} event(s)"));
+                reporter.line(format!(
+                    "session {session_id}: recorded {imported} event(s)"
+                ));
                 if skipped > 0 {
-                    reporter.note(format!("{skipped} line(s) could not be parsed (see ZENX_LOG=warn)"));
+                    reporter.note(format!(
+                        "{skipped} line(s) could not be parsed (see ZENX_LOG=warn)"
+                    ));
                 }
                 if created {
                     reporter.note(format!("close it with: zenx trace end {session_id}"));
@@ -341,9 +343,8 @@ pub fn run(args: &TraceArgs, output: Option<OutputArg>, no_color: bool) -> Resul
             label,
         } => {
             let db = context.db()?;
-            let adapter = adapter_by_name(&adapter).ok_or_else(|| {
-                ZenxError::Invalid(format!("unknown adapter {adapter:?}"))
-            })?;
+            let adapter = adapter_by_name(&adapter)
+                .ok_or_else(|| ZenxError::Invalid(format!("unknown adapter {adapter:?}")))?;
             let summary = import_jsonl(&db, &file, adapter.as_ref(), &agent, label.as_deref())?;
             if reporter.is_json() {
                 reporter.json(&summary)?;
@@ -362,7 +363,9 @@ pub fn run(args: &TraceArgs, output: Option<OutputArg>, no_color: bool) -> Resul
             if reporter.is_json() {
                 reporter.json(&json!({ "ok": true, "removed": removed }))?;
             } else {
-                reporter.line(format!("removed {removed} session(s) older than {days} day(s)"));
+                reporter.line(format!(
+                    "removed {removed} session(s) older than {days} day(s)"
+                ));
             }
             Ok(0)
         }

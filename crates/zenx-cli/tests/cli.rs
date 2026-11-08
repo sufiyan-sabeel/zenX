@@ -101,14 +101,7 @@ fn trace_records_from_stdin_and_inspects_the_session() {
 
     let mut child = zenx(&home)
         .args([
-            "trace",
-            "record",
-            "--agent",
-            "codex",
-            "--label",
-            "cli-test",
-            "--output",
-            "json",
+            "trace", "record", "--agent", "codex", "--label", "cli-test", "--output", "json",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -146,7 +139,10 @@ fn trace_records_from_stdin_and_inspects_the_session() {
 fn missing_session_exits_with_not_found_code_and_json_error() {
     let home = temp_home("notfound");
     assert!(run(&home, &["init"]).status.success());
-    let output = run(&home, &["trace", "inspect", "sess_missing", "--output", "json"]);
+    let output = run(
+        &home,
+        &["trace", "inspect", "sess_missing", "--output", "json"],
+    );
     assert_eq!(output.status.code(), Some(4));
     let payload = json(&output);
     assert_eq!(payload["ok"], false);
@@ -184,7 +180,13 @@ fn skills_install_verify_and_remove_a_local_skill() {
 
     let output = run(
         &home,
-        &["skills", "install", source.to_str().unwrap(), "--output", "json"],
+        &[
+            "skills",
+            "install",
+            source.to_str().unwrap(),
+            "--output",
+            "json",
+        ],
     );
     assert!(output.status.success(), "stderr: {}", stderr(&output));
     assert_eq!(json(&output)["name"], "demo");
@@ -217,7 +219,13 @@ fn doctor_fails_a_repository_without_a_readme() {
     // --fix alone must not write anything.
     let output = run(
         &home,
-        &["doctor", repo.to_str().unwrap(), "--fix", "--output", "json"],
+        &[
+            "doctor",
+            repo.to_str().unwrap(),
+            "--fix",
+            "--output",
+            "json",
+        ],
     );
     assert!(output.status.success() || output.status.code() == Some(1));
     assert!(!repo.join("README.md").exists());
