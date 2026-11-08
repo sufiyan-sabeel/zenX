@@ -156,7 +156,13 @@ fn search_and_print(
     doc_version: Option<String>,
     limit: usize,
 ) -> Result<u8> {
-    let hits = search(db, query, collection.as_deref(), doc_version.as_deref(), limit)?;
+    let hits = search(
+        db,
+        query,
+        collection.as_deref(),
+        doc_version.as_deref(),
+        limit,
+    )?;
     if reporter.is_json() {
         reporter.json(&json!({ "query": query, "hits": hits }))?;
         return Ok(0);
