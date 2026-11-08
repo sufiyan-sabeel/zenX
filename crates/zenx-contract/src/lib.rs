@@ -114,7 +114,9 @@ fn parse_document(text: &str) -> Result<serde_json::Value> {
         return Ok(value);
     }
     serde_yaml::from_str::<serde_json::Value>(text).map_err(|error| {
-        ZenxError::Invalid(format!("document is neither valid JSON nor valid YAML: {error}"))
+        ZenxError::Invalid(format!(
+            "document is neither valid JSON nor valid YAML: {error}"
+        ))
     })
 }
 
@@ -268,12 +270,7 @@ pub fn load_spec(path: &Path) -> Result<Spec> {
     })
 }
 
-fn change(
-    severity: Severity,
-    kind: &str,
-    endpoint: &str,
-    detail: String,
-) -> Change {
+fn change(severity: Severity, kind: &str, endpoint: &str, detail: String) -> Change {
     Change {
         severity,
         kind: kind.to_string(),
@@ -515,7 +512,8 @@ paths:
 "#;
 
     fn write(tag: &str, content: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("zenx-contract-{}-{}", std::process::id(), tag));
+        let dir =
+            std::env::temp_dir().join(format!("zenx-contract-{}-{}", std::process::id(), tag));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("openapi.yaml");
         std::fs::write(&path, content).unwrap();
@@ -609,7 +607,10 @@ paths:
     fn invalid_documents_are_rejected() {
         let path = write("invalid", "not: [an openapi document");
         assert!(load_spec(&path).is_err());
-        let path = write("nopaths", "openapi: 3.0.0\ninfo:\n  title: x\n  version: '1'\n");
+        let path = write(
+            "nopaths",
+            "openapi: 3.0.0\ninfo:\n  title: x\n  version: '1'\n",
+        );
         assert!(load_spec(&path).is_err());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
     }

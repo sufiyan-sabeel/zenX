@@ -17,7 +17,11 @@ pub fn short_id(prefix: &str) -> String {
         hasher.update(elapsed.as_nanos().to_le_bytes());
     }
     let digest = hasher.finalize();
-    let hex: String = digest.iter().take(6).map(|byte| format!("{:02x}", *byte)).collect();
+    let hex: String = digest
+        .iter()
+        .take(6)
+        .map(|byte| format!("{:02x}", *byte))
+        .collect();
     format!("{prefix}_{hex}")
 }
 

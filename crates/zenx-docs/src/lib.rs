@@ -82,7 +82,9 @@ pub fn add_collection(
     max_file_bytes: u64,
 ) -> Result<AddReport> {
     if collection.trim().is_empty() {
-        return Err(ZenxError::Invalid("collection name must not be empty".into()));
+        return Err(ZenxError::Invalid(
+            "collection name must not be empty".into(),
+        ));
     }
     if version.trim().is_empty() {
         return Err(ZenxError::Invalid("version must not be empty".into()));
@@ -99,7 +101,8 @@ pub fn add_collection(
     let mut documents: Vec<(String, String, String)> = Vec::new();
 
     for entry in WalkDir::new(source).follow_links(false) {
-        let entry = entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", source.display())))?;
+        let entry =
+            entry.map_err(|e| ZenxError::Invalid(format!("walk {}: {e}", source.display())))?;
         if !entry.file_type().is_file() || !is_documentation(entry.path()) {
             continue;
         }
@@ -413,7 +416,10 @@ mod tests {
     fn search_filters_by_collection_and_version() {
         let (root, db) = fixture("filters");
         add_collection(&db, &root, "zenx", "0.1.0", 1024 * 1024).unwrap();
-        assert_eq!(search(&db, "notes", Some("zenx"), None, 10).unwrap().len(), 1);
+        assert_eq!(
+            search(&db, "notes", Some("zenx"), None, 10).unwrap().len(),
+            1
+        );
         assert_eq!(
             search(&db, "notes", Some("other"), None, 10).unwrap().len(),
             0
