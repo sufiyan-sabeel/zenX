@@ -81,13 +81,14 @@ fn write_value(config: &mut Config, key: &str, raw: &str) -> Result<()> {
         "trace.redact" => config.trace.redact = parse_bool(raw)?,
         "trace.capture_file_changes" => config.trace.capture_file_changes = parse_bool(raw)?,
         "trace.retention_days" => {
-            config.trace.retention_days = if raw.eq_ignore_ascii_case("none") || raw.is_empty() {
-                None
-            } else {
-                Some(raw.parse::<u32>().map_err(|_| {
-                    ZenxError::Invalid(format!("{raw:?} is not a number of days"))
-                })?)
-            }
+            config.trace.retention_days =
+                if raw.eq_ignore_ascii_case("none") || raw.is_empty() {
+                    None
+                } else {
+                    Some(raw.parse::<u32>().map_err(|_| {
+                        ZenxError::Invalid(format!("{raw:?} is not a number of days"))
+                    })?)
+                }
         }
         "skills.allow_network" => config.skills.allow_network = parse_bool(raw)?,
         "skills.store" => {
@@ -162,7 +163,8 @@ pub fn run(args: &ConfigArgs, output: Option<OutputArg>, no_color: bool) -> Resu
             write_value(&mut config, key, value)?;
             config.save(&config_path)?;
             if reporter.is_json() {
-                reporter.json(&json!({ "ok": true, "key": key, "value": read_value(&config, key)? }))?;
+                reporter
+                    .json(&json!({ "ok": true, "key": key, "value": read_value(&config, key)? }))?;
             } else {
                 reporter.line(format!("{key} = {value}"));
             }

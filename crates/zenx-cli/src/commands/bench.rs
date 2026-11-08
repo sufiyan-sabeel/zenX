@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
 use serde_json::json;
-use zenx_bench::{compare, load_tasks, run, RunOptions};
+use zenx_bench::{compare, load_tasks, RunOptions};
 use zenx_core::Result;
 use zenx_storage::map_err;
 
@@ -42,7 +42,11 @@ pub fn run(args: &BenchArgs, output: Option<OutputArg>, no_color: bool) -> Resul
     let context = Context::load(output, no_color)?;
     let reporter = context.reporter;
 
-    match args.command.clone().unwrap_or(BenchCommand::History { limit: 10 }) {
+    match args
+        .command
+        .clone()
+        .unwrap_or(BenchCommand::History { limit: 10 })
+    {
         BenchCommand::Run {
             tasks,
             repeat,
@@ -50,12 +54,8 @@ pub fn run(args: &BenchArgs, output: Option<OutputArg>, no_color: bool) -> Resul
         } => {
             let db = context.db()?;
             let definitions = load_tasks(&tasks)?;
-            let summary = run(
-                &db,
-                &definitions,
-                &RunOptions { repeat, label },
-                &tasks,
-            )?;
+            let summary =
+                zenx_bench::run(&db, &definitions, &RunOptions { repeat, label }, &tasks)?;
             if reporter.is_json() {
                 reporter.json(&summary)?;
                 return Ok(0);
@@ -148,7 +148,10 @@ pub fn run(args: &BenchArgs, output: Option<OutputArg>, no_color: bool) -> Resul
                 reporter.line("no benchmark runs recorded");
                 return Ok(0);
             }
-            reporter.line(format!("{:<6} {:<32} {:<22} {}", "RUN", "LABEL", "STARTED", "ENDED"));
+            reporter.line(format!(
+                "{:<6} {:<32} {:<22} {}",
+                "RUN", "LABEL", "STARTED", "ENDED"
+            ));
             for run in &runs {
                 reporter.line(format!(
                     "#{:<5} {:<32} {:<22} {}",

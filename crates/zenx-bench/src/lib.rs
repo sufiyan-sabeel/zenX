@@ -179,10 +179,7 @@ fn describe_failure(execution: &Execution, task: &TaskDef) -> String {
     }
     if let Some(expected) = task.expect_exit {
         if execution.exit_code != Some(expected) {
-            return format!(
-                "exit code {:?}, expected {expected}",
-                execution.exit_code
-            );
+            return format!("exit code {:?}, expected {expected}", execution.exit_code);
         }
     }
     if let Some(needle) = &task.expect_stdout_contains {
@@ -521,7 +518,10 @@ mod tests {
     }
 
     fn self_binary() -> String {
-        std::env::current_exe().unwrap().to_string_lossy().to_string()
+        std::env::current_exe()
+            .unwrap()
+            .to_string_lossy()
+            .to_string()
     }
 
     fn passing_task(id: &str) -> TaskDef {
@@ -621,7 +621,13 @@ mod tests {
         let task_file = root.join("tasks.toml");
         std::fs::write(&task_file, "[[task]]\nid = \"a\"\ncommand = [\"true\"]\n").unwrap();
 
-        let base = run(&db, &[passing_task("a")], &RunOptions::default(), &task_file).unwrap();
+        let base = run(
+            &db,
+            &[passing_task("a")],
+            &RunOptions::default(),
+            &task_file,
+        )
+        .unwrap();
         let mut failing = passing_task("a");
         failing.expect_exit = Some(9);
         let head = run(&db, &[failing], &RunOptions::default(), &task_file).unwrap();
