@@ -1,0 +1,53 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/zenx-core",
+    "crates/zenx-storage",
+    "crates/zenx-security",
+    "crates/zenx-trace",
+    "crates/zenx-skills",
+    "crates/zenx-doctor",
+    "crates/zenx-mobile",
+    "crates/zenx-bench",
+    "crates/zenx-contract",
+    "crates/zenx-docs",
+    "crates/zenx-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "Apache-2.0"
+repository = "https://github.com/sufiyan-sabeel/zenX"
+authors = ["Umaiz Sufiyan"]
+
+[workspace.dependencies]
+zenx-core = { path = "crates/zenx-core" }
+zenx-storage = { path = "crates/zenx-storage" }
+zenx-security = { path = "crates/zenx-security" }
+zenx-trace = { path = "crates/zenx-trace" }
+zenx-skills = { path = "crates/zenx-skills" }
+zenx-doctor = { path = "crates/zenx-doctor" }
+zenx-mobile = { path = "crates/zenx-mobile" }
+zenx-bench = { path = "crates/zenx-bench" }
+zenx-contract = { path = "crates/zenx-contract" }
+zenx-docs = { path = "crates/zenx-docs" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+toml = "0.8"
+clap = { version = "4", features = ["derive"] }
+thiserror = "1"
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+regex = "1"
+walkdir = "2"
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1
+panic = "abort"
