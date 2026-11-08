@@ -1,0 +1,16 @@
+[package]
+name = "zenx-docs"
+description = "Offline documentation import and full-text search"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+zenx-core.workspace = true
+zenx-storage.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+walkdir.workspace = true
