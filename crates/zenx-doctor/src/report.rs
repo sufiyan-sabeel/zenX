@@ -133,7 +133,11 @@ impl DoctorReport {
         if !problems.is_empty() {
             out.push_str("\n## Findings\n\n");
             for check in problems {
-                out.push_str(&format!("### {} — {}\n\n", check.status.symbol(), check.title));
+                out.push_str(&format!(
+                    "### {} — {}\n\n",
+                    check.status.symbol(),
+                    check.title
+                ));
                 out.push_str(&format!("{}\n\n", check.detail));
                 if !check.evidence.is_empty() {
                     for item in &check.evidence {
@@ -146,7 +150,9 @@ impl DoctorReport {
 
         if !self.fixes.is_empty() {
             out.push_str("\n## Available repairs\n\n");
-            out.push_str("Run `zenx doctor --fix` to review these, then `zenx doctor --fix --apply`.\n\n");
+            out.push_str(
+                "Run `zenx doctor --fix` to review these, then `zenx doctor --fix --apply`.\n\n",
+            );
             for fix in &self.fixes {
                 out.push_str(&format!("- {} → {}\n", fix.title, fix.path));
             }

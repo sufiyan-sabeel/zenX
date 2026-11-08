@@ -89,10 +89,7 @@ pub fn apply_fixes(root: &Path, fixes: &[Fix], apply: bool) -> Result<Vec<FixOut
         let target = safe_join(root, &fix.path)?;
         let exists = target.exists();
         let (applied, message) = if exists {
-            (
-                false,
-                format!("skipped: {} already exists", fix.path),
-            )
+            (false, format!("skipped: {} already exists", fix.path))
         } else if !apply {
             (false, format!("would create {}", fix.path))
         } else {
@@ -157,11 +154,17 @@ mod tests {
         let dir = fixture("apply");
         let outcomes = apply_fixes(&dir, &[fix("README.md", "new")], true).unwrap();
         assert!(outcomes[0].applied);
-        assert_eq!(std::fs::read_to_string(dir.join("README.md")).unwrap(), "new");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("README.md")).unwrap(),
+            "new"
+        );
 
         let outcomes = apply_fixes(&dir, &[fix("README.md", "replacement")], true).unwrap();
         assert!(!outcomes[0].applied);
-        assert_eq!(std::fs::read_to_string(dir.join("README.md")).unwrap(), "new");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("README.md")).unwrap(),
+            "new"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

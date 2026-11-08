@@ -29,7 +29,12 @@ pub fn detectors() -> Vec<Box<dyn Detector>> {
 }
 
 /// Run a command in `cwd`, capturing output. Never inherits the terminal.
-fn run(program: &str, args: &[&str], cwd: &Path, envs: &[(&str, String)]) -> Result<(bool, String), String> {
+fn run(
+    program: &str,
+    args: &[&str],
+    cwd: &Path,
+    envs: &[(&str, String)],
+) -> Result<(bool, String), String> {
     let mut command = std::process::Command::new(program);
     command.args(args).current_dir(cwd);
     for (key, value) in envs {
@@ -87,10 +92,14 @@ impl Detector for RustDetector {
                         }
                     }
                     if missing.is_empty() {
-                        check.detail = format!("Cargo.toml valid, {} workspace member(s) present", members.len());
+                        check.detail = format!(
+                            "Cargo.toml valid, {} workspace member(s) present",
+                            members.len()
+                        );
                     } else {
                         check.status = Status::Fail;
-                        check.detail = format!("{} workspace member path(s) do not exist", missing.len());
+                        check.detail =
+                            format!("{} workspace member path(s) do not exist", missing.len());
                         check.evidence = missing;
                     }
                 }
@@ -190,7 +199,12 @@ impl Detector for RustDetector {
             ) {
                 Ok(result) => result,
                 Err(error) => {
-                    checks.push(Check::new("rust.tests", "cargo test --no-run", Status::Skip, error));
+                    checks.push(Check::new(
+                        "rust.tests",
+                        "cargo test --no-run",
+                        Status::Skip,
+                        error,
+                    ));
                     return checks;
                 }
             };
@@ -233,8 +247,9 @@ impl Detector for NodeDetector {
 
         match std::fs::read_to_string(&manifest)
             .map_err(|e| e.to_string())
-            .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).map_err(|e| e.to_string()))
-        {
+            .and_then(|text| {
+                serde_json::from_str::<serde_json::Value>(&text).map_err(|e| e.to_string())
+            }) {
             Ok(value) => {
                 checks.push(Check::new(
                     "node.manifest",
@@ -268,12 +283,21 @@ impl Detector for NodeDetector {
             )),
         }
 
-        let lockfiles = ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb"];
+        let lockfiles = [
+            "package-lock.json",
+            "pnpm-lock.yaml",
+            "yarn.lock",
+            "bun.lockb",
+        ];
         let found = find_first(root, &lockfiles);
         checks.push(Check::new(
             "node.lockfile",
             "Lockfile committed",
-            if found.is_some() { Status::Pass } else { Status::Warn },
+            if found.is_some() {
+                Status::Pass
+            } else {
+                Status::Warn
+            },
             match found {
                 Some(path) => relative(root, &path),
                 None => "no lockfile; dependency versions float".to_string(),
@@ -329,7 +353,12 @@ impl Detector for PythonDetector {
     fn detect(&self, root: &Path) -> bool {
         find_first(
             root,
-            &["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"],
+            &[
+                "pyproject.toml",
+                "setup.py",
+                "setup.cfg",
+                "requirements.txt",
+            ],
         )
         .is_some()
     }
@@ -338,7 +367,12 @@ impl Detector for PythonDetector {
         let mut checks = Vec::new();
         let manifest = find_first(
             root,
-            &["pyproject.toml", "setup.py", "setup.cfg", "requirements.txt"],
+            &[
+                "pyproject.toml",
+                "setup.py",
+                "setup.cfg",
+                "requirements.txt",
+            ],
         );
         checks.push(Check::new(
             "python.manifest",
@@ -360,7 +394,11 @@ impl Detector for PythonDetector {
         checks.push(Check::new(
             "python.tests",
             "Tests present",
-            if has_tests { Status::Pass } else { Status::Warn },
+            if has_tests {
+                Status::Pass
+            } else {
+                Status::Warn
+            },
             if has_tests {
                 "test files found".to_string()
             } else {
@@ -382,13 +420,19 @@ impl Detector for PythonDetector {
                     "no python interpreter on PATH".to_string(),
                 ));
             } else {
-                let (ok, output) = match run(python, &["-m", "pytest", "--collect-only", "-q"], root, &[]) {
-                    Ok(result) => result,
-                    Err(error) => {
-                        checks.push(Check::new("python.tests.collect", "pytest collection", Status::Skip, error));
-                        return checks;
-                    }
-                };
+                let (ok, output) =
+                    match run(python, &["-m", "pytest", "--collect-only", "-q"], root, &[]) {
+                        Ok(result) => result,
+                        Err(error) => {
+                            checks.push(Check::new(
+                                "python.tests.collect",
+                                "pytest collection",
+                                Status::Skip,
+                                error,
+                            ));
+                            return checks;
+                        }
+                    };
                 let missing_pytest = output.contains("No module named pytest");
                 let mut check = Check::new(
                     "python.tests.collect",
@@ -435,7 +479,8 @@ mod tests {
     use super::*;
 
     fn fixture(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("zenx-detector-{}-{}", std::process::id(), tag));
+        let dir =
+            std::env::temp_dir().join(format!("zenx-detector-{}-{}", std::process::id(), tag));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -460,7 +505,11 @@ mod tests {
     #[test]
     fn rust_detector_skips_builds_without_consent() {
         let dir = fixture("rust-skip");
-        std::fs::write(dir.join("Cargo.toml"), "[package]\nname = \"x\"\nversion = \"0.1.0\"\n").unwrap();
+        std::fs::write(
+            dir.join("Cargo.toml"),
+            "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
+        )
+        .unwrap();
         let checks = RustDetector.checks(&dir, &DoctorContext::default());
         let build = checks.iter().find(|c| c.id == "rust.build").unwrap();
         assert_eq!(build.status, Status::Skip);
@@ -470,15 +519,27 @@ mod tests {
     #[test]
     fn node_detector_reports_test_script() {
         let dir = fixture("node");
-        std::fs::write(dir.join("package.json"), "{\"scripts\":{\"test\":\"vitest\"}}").unwrap();
+        std::fs::write(
+            dir.join("package.json"),
+            "{\"scripts\":{\"test\":\"vitest\"}}",
+        )
+        .unwrap();
         std::fs::write(dir.join("package-lock.json"), "{}").unwrap();
         let checks = NodeDetector.checks(&dir, &DoctorContext::default());
         assert_eq!(
-            checks.iter().find(|c| c.id == "node.scripts.test").unwrap().status,
+            checks
+                .iter()
+                .find(|c| c.id == "node.scripts.test")
+                .unwrap()
+                .status,
             Status::Pass
         );
         assert_eq!(
-            checks.iter().find(|c| c.id == "node.lockfile").unwrap().status,
+            checks
+                .iter()
+                .find(|c| c.id == "node.lockfile")
+                .unwrap()
+                .status,
             Status::Pass
         );
         let _ = std::fs::remove_dir_all(&dir);
@@ -492,7 +553,11 @@ mod tests {
         assert!(PythonDetector.detect(&dir));
         let checks = PythonDetector.checks(&dir, &DoctorContext::default());
         assert_eq!(
-            checks.iter().find(|c| c.id == "python.tests").unwrap().status,
+            checks
+                .iter()
+                .find(|c| c.id == "python.tests")
+                .unwrap()
+                .status,
             Status::Pass
         );
         let _ = std::fs::remove_dir_all(&dir);

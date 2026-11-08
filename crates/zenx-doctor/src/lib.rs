@@ -79,7 +79,10 @@ fn common_checks(root: &Path, context: &DoctorContext) -> Vec<Check> {
     let mut checks = Vec::new();
 
     // Documentation
-    match find_first(root, &["README.md", "README.rst", "README.txt", "readme.md"]) {
+    match find_first(
+        root,
+        &["README.md", "README.rst", "README.txt", "readme.md"],
+    ) {
         Some(path) => checks.push(Check::new(
             "docs.readme",
             "README present",
@@ -151,7 +154,11 @@ fn common_checks(root: &Path, context: &DoctorContext) -> Vec<Check> {
             }
         }
     }
-    for candidate in [".gitlab-ci.yml", ".circleci/config.yml", "azure-pipelines.yml"] {
+    for candidate in [
+        ".gitlab-ci.yml",
+        ".circleci/config.yml",
+        "azure-pipelines.yml",
+    ] {
         let path = root.join(candidate);
         if path.is_file() {
             ci_files.push(candidate.to_string());
@@ -184,7 +191,11 @@ fn common_checks(root: &Path, context: &DoctorContext) -> Vec<Check> {
             let dirty = run_git(root, &["status", "--porcelain"])
                 .map(|text| text.lines().count())
                 .unwrap_or(0);
-            let status = if dirty == 0 { Status::Pass } else { Status::Warn };
+            let status = if dirty == 0 {
+                Status::Pass
+            } else {
+                Status::Warn
+            };
             let detail = if dirty == 0 {
                 format!("branch {branch}, working tree clean")
             } else {
@@ -353,7 +364,10 @@ mod tests {
     fn extracts_commands_from_fences_only() {
         let markdown = "# Title\n\nRun this:\n\n```bash\n$ cargo build\nnpm test\n# a comment\n```\n\nNot a command.\n";
         let commands = extract_commands(markdown);
-        assert_eq!(commands, vec!["cargo build".to_string(), "npm test".to_string()]);
+        assert_eq!(
+            commands,
+            vec!["cargo build".to_string(), "npm test".to_string()]
+        );
     }
 
     #[test]
@@ -374,7 +388,11 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let report = diagnose(&dir, &DoctorOptions::default()).unwrap();
-        let readme = report.checks.iter().find(|c| c.id == "docs.readme").unwrap();
+        let readme = report
+            .checks
+            .iter()
+            .find(|c| c.id == "docs.readme")
+            .unwrap();
         assert_eq!(readme.status, Status::Fail);
         assert!(!report.fixes.is_empty(), "a README fix should be planned");
         let _ = std::fs::remove_dir_all(&dir);

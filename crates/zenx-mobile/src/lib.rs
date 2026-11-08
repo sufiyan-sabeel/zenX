@@ -63,7 +63,9 @@ pub struct RestoreReport {
 }
 
 fn env_non_empty(key: &str) -> Option<String> {
-    std::env::var(key).ok().filter(|value| !value.trim().is_empty())
+    std::env::var(key)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
 }
 
 /// Detect the runtime environment without touching the network.
@@ -81,7 +83,10 @@ pub fn detect_environment() -> Environment {
             .and_then(|text| {
                 text.lines()
                     .find(|line| line.starts_with("ro.build.version.release="))
-                    .map(|line| line.trim_start_matches("ro.build.version.release=").to_string())
+                    .map(|line| {
+                        line.trim_start_matches("ro.build.version.release=")
+                            .to_string()
+                    })
             })
     } else {
         None
@@ -202,7 +207,9 @@ pub fn diagnose() -> DiagnosticReport {
         notes.push(
             "Termux needs clang to build zenX because SQLite is compiled from source by the bundled rusqlite feature.".to_string(),
         );
-        notes.push("No command requires root; zenX never calls pkg or apt on your behalf.".to_string());
+        notes.push(
+            "No command requires root; zenX never calls pkg or apt on your behalf.".to_string(),
+        );
     }
     if environment.android && !environment.termux {
         notes.push("Android detected without Termux: most zenX commands expect a POSIX shell and will not work here.".to_string());
@@ -220,7 +227,9 @@ pub fn diagnose() -> DiagnosticReport {
 }
 
 fn stamp() -> String {
-    zenx_core::util::now_rfc3339().replace(':', "").replace('-', "")
+    zenx_core::util::now_rfc3339()
+        .replace(':', "")
+        .replace('-', "")
 }
 
 #[derive(Serialize, serde::Deserialize)]
@@ -289,7 +298,8 @@ pub fn restore(paths: &ZenxPaths, source: &Path, overwrite: bool) -> Result<Rest
             source.display()
         )));
     }
-    let text = std::fs::read_to_string(&manifest_path).map_err(|e| ZenxError::io(&manifest_path, e))?;
+    let text =
+        std::fs::read_to_string(&manifest_path).map_err(|e| ZenxError::io(&manifest_path, e))?;
     let manifest: BackupManifest = serde_json::from_str(&text)
         .map_err(|e| ZenxError::Invalid(format!("{}: {e}", manifest_path.display())))?;
 
@@ -386,7 +396,10 @@ mod tests {
         std::fs::write(paths.skills_dir().join("demo/SKILL.md"), "x").unwrap();
 
         let report = backup(&paths, &root.join("backups")).unwrap();
-        assert_eq!(report.entries, vec!["config.toml".to_string(), "skills/".to_string()]);
+        assert_eq!(
+            report.entries,
+            vec!["config.toml".to_string(), "skills/".to_string()]
+        );
 
         // Wipe and restore.
         std::fs::remove_file(paths.config_file()).unwrap();
