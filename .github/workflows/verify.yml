@@ -252,7 +252,7 @@ jobs:
         run: |
           set -eu
           ZENX_RELEASE_BASE_URL="file://$PWD/dist" "$RUNNER_TEMP/bin/zenx" update \
-            --check --version v9.9.9 --output json > check.json
+            --check --tag v9.9.9 --output json > check.json
           cat check.json
           grep -q '"action": "available"' check.json
       - name: update --dry-run verifies without installing
@@ -260,7 +260,7 @@ jobs:
           set -eu
           before="$(sha256sum "$RUNNER_TEMP/bin/zenx" | cut -d' ' -f1)"
           ZENX_RELEASE_BASE_URL="file://$PWD/dist" "$RUNNER_TEMP/bin/zenx" update \
-            --dry-run --version v9.9.9 --output json > dry.json
+            --dry-run --tag v9.9.9 --output json > dry.json
           cat dry.json
           grep -q '"verified": true' dry.json
           after="$(sha256sum "$RUNNER_TEMP/bin/zenx" | cut -d' ' -f1)"
@@ -269,7 +269,7 @@ jobs:
         run: |
           set -eu
           ZENX_RELEASE_BASE_URL="file://$PWD/dist" "$RUNNER_TEMP/bin/zenx" update \
-            --version v9.9.9 --output json > install.json
+            --tag v9.9.9 --output json > install.json
           cat install.json
           grep -q '"action": "installed"' install.json
           test -f "$RUNNER_TEMP/bin/zenx.old"
@@ -284,7 +284,7 @@ jobs:
           cp -r dist dist-bad
           printf '%064d  zenx-x86_64-unknown-linux-gnu.tar.gz\n' 0 > dist-bad/SHA256SUMS.txt
           if ZENX_RELEASE_BASE_URL="file://$PWD/dist-bad" "$RUNNER_TEMP/bin/zenx" update \
-               --version v9.9.9; then
+               --tag v9.9.9; then
             echo "updater installed an unverified artifact" >&2
             exit 1
           fi

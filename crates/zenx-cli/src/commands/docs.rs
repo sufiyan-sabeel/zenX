@@ -22,16 +22,16 @@ pub enum DocsCommand {
         path: PathBuf,
         #[arg(long, default_value = "local")]
         collection: String,
-        #[arg(long, default_value = "latest")]
-        version: String,
+        #[arg(long = "doc-version", default_value = "latest")]
+        doc_version: String,
     },
     /// Search imported documentation (default when no subcommand is given)
     Search {
         query: String,
         #[arg(long)]
         collection: Option<String>,
-        #[arg(long)]
-        version: Option<String>,
+        #[arg(long = "doc-version")]
+        doc_version: Option<String>,
         #[arg(long, default_value_t = 20)]
         limit: usize,
     },
@@ -40,8 +40,8 @@ pub enum DocsCommand {
     /// Remove an imported collection
     Remove {
         collection: String,
-        #[arg(long, default_value = "latest")]
-        version: String,
+        #[arg(long = "doc-version", default_value = "latest")]
+        doc_version: String,
     },
 }
 
@@ -54,13 +54,13 @@ pub fn run(args: &DocsArgs, output: Option<OutputArg>, no_color: bool) -> Result
         Some(DocsCommand::Add {
             path,
             collection,
-            version,
+            doc_version,
         }) => {
             let report = add_collection(
                 &db,
                 &path,
                 &collection,
-                &version,
+                &doc_version,
                 context.config.docs.max_file_bytes,
             )?;
             if reporter.is_json() {
@@ -68,7 +68,7 @@ pub fn run(args: &DocsArgs, output: Option<OutputArg>, no_color: bool) -> Result
                 return Ok(0);
             }
             reporter.line(format!(
-                "imported {} document(s) into {collection}@{version}",
+                "imported {} document(s) into {collection}@{doc_version}",
                 report.imported
             ));
             for skip in &report.skipped {
@@ -106,14 +106,14 @@ pub fn run(args: &DocsArgs, output: Option<OutputArg>, no_color: bool) -> Result
 
         Some(DocsCommand::Remove {
             collection,
-            version,
+            doc_version,
         }) => {
-            let removed = remove_collection(&db, &collection, &version)?;
+            let removed = remove_collection(&db, &collection, &doc_version)?;
             if reporter.is_json() {
                 reporter.json(&json!({ "ok": true, "removed": removed }))?;
             } else {
                 reporter.line(format!(
-                    "removed {removed} document(s) from {collection}@{version}"
+                    "removed {removed} document(s) from {collection}@{doc_version}"
                 ));
             }
             Ok(0)
@@ -122,9 +122,9 @@ pub fn run(args: &DocsArgs, output: Option<OutputArg>, no_color: bool) -> Result
         Some(DocsCommand::Search {
             query,
             collection,
-            version,
+            doc_version,
             limit,
-        }) => search_and_print(&db, &reporter, &query, collection, version, limit),
+        }) => search_and_print(&db, &reporter, &query, collection, doc_version, limit),
 
         None => {
             // No subcommand and no query: list what is available.
@@ -153,10 +153,10 @@ fn search_and_print(
     reporter: &zenx_core::output::Reporter,
     query: &str,
     collection: Option<String>,
-    version: Option<String>,
+    doc_version: Option<String>,
     limit: usize,
 ) -> Result<u8> {
-    let hits = search(db, query, collection.as_deref(), version.as_deref(), limit)?;
+    let hits = search(db, query, collection.as_deref(), doc_version.as_deref(), limit)?;
     if reporter.is_json() {
         reporter.json(&json!({ "query": query, "hits": hits }))?;
         return Ok(0);

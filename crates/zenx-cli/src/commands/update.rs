@@ -12,8 +12,8 @@ pub struct UpdateArgs {
     pub check: bool,
 
     /// Install a specific release tag, e.g. v0.2.0
-    #[arg(long, value_name = "TAG")]
-    pub version: Option<String>,
+    #[arg(long = "tag", value_name = "TAG")]
+    pub tag: Option<String>,
 
     /// Download and verify the release, but do not replace the binary
     #[arg(long)]
@@ -42,7 +42,7 @@ pub fn run(args: &UpdateArgs, output: Option<OutputArg>, no_color: bool) -> Resu
 
     let report = update(&UpdateOptions {
         check_only: args.check,
-        version: args.version.clone(),
+        version: args.tag.clone(),
         dry_run: args.dry_run,
         target: None,
         base_url: None,

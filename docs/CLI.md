@@ -119,16 +119,16 @@ Exits 1 when breaking changes are found, so CI can gate on it.
 ## Docs
 
 ```
-zenx docs [search] <query> [--collection C] [--version V] [--limit N]
-zenx docs add <directory> [--collection C] [--version V]
+zenx docs [search] <query> [--collection C] [--doc-version V] [--limit N]
+zenx docs add <directory> [--collection C] [--doc-version V]
 zenx docs list
-zenx docs remove <collection> [--version V]
+zenx docs remove <collection> [--doc-version V]
 ```
 
 ## Update and uninstall
 
 ```
-zenx update [--check] [--version TAG] [--dry-run] [--rollback]
+zenx update [--check] [--tag TAG] [--dry-run] [--rollback]
 zenx uninstall [--yes] [--purge-data]
 ```
 

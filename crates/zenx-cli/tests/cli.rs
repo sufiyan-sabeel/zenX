@@ -318,3 +318,65 @@ fn mobile_diagnose_always_answers() {
     assert!(payload["tools"].is_array());
     let _ = std::fs::remove_dir_all(&home);
 }
+
+#[test]
+fn every_command_and_subcommand_help_is_valid() {
+    let home = temp_home("help-all");
+    for command in [
+        "init", "status", "config", "trace", "skills", "doctor", "mobile", "bench", "contract",
+        "docs", "update", "uninstall",
+    ] {
+        let output = run(&home, &[command, "--help"]);
+        assert!(
+            output.status.success(),
+            "`zenx {command} --help` failed: {}",
+            stderr(&output)
+        );
+    }
+
+    // Argument conflicts inside a subcommand only surface when that subcommand
+    // is built, so every nested command is constructed here too.
+    let nested: &[(&str, &str)] = &[
+        ("config", "show"),
+        ("config", "get"),
+        ("config", "set"),
+        ("config", "path"),
+        ("trace", "sessions"),
+        ("trace", "inspect"),
+        ("trace", "export"),
+        ("trace", "record"),
+        ("trace", "start"),
+        ("trace", "end"),
+        ("trace", "import"),
+        ("trace", "prune"),
+        ("trace", "adapters"),
+        ("trace", "delete"),
+        ("skills", "list"),
+        ("skills", "search"),
+        ("skills", "install"),
+        ("skills", "verify"),
+        ("skills", "update"),
+        ("skills", "rollback"),
+        ("skills", "remove"),
+        ("mobile", "diagnose"),
+        ("mobile", "backup"),
+        ("mobile", "restore"),
+        ("bench", "run"),
+        ("bench", "compare"),
+        ("bench", "history"),
+        ("contract", "compare"),
+        ("docs", "add"),
+        ("docs", "search"),
+        ("docs", "list"),
+        ("docs", "remove"),
+    ];
+    for (parent, child) in nested {
+        let output = run(&home, &[parent, child, "--help"]);
+        assert!(
+            output.status.success(),
+            "`zenx {parent} {child} --help` failed: {}",
+            stderr(&output)
+        );
+    }
+    let _ = std::fs::remove_dir_all(&home);
+}
