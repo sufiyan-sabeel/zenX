@@ -84,7 +84,13 @@ mod tests {
     #[test]
     fn only_zenx_executables_are_accepted() {
         assert!(ensure_zenx_binary(Path::new("/usr/local/bin/zenx")).is_ok());
+        assert!(ensure_zenx_binary(Path::new("zenx")).is_ok());
+        // Path::file_name only treats the platform separator as a separator, so
+        // each platform is checked with a path it would actually produce.
+        #[cfg(windows)]
         assert!(ensure_zenx_binary(Path::new(r"C:\tools\zenx.exe")).is_ok());
+        #[cfg(not(windows))]
+        assert!(ensure_zenx_binary(Path::new("/opt/zenx/bin/zenx.exe")).is_ok());
         let error = ensure_zenx_binary(Path::new("/usr/bin/rm")).unwrap_err();
         assert!(matches!(error, ZenxError::Security(_)));
         assert_eq!(error.exit_code(), 3);
