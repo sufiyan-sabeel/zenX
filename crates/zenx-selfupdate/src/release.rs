@@ -19,6 +19,8 @@ pub fn target_triple() -> Option<&'static str> {
         ("macos", "x86_64") => Some("x86_64-apple-darwin"),
         ("macos", "aarch64") => Some("aarch64-apple-darwin"),
         ("windows", "x86_64") => Some("x86_64-pc-windows-msvc"),
+        // Termux reports itself as android; it needs the Bionic build.
+        ("android", "aarch64") => Some("aarch64-linux-android"),
         _ => None,
     }
 }
@@ -234,6 +236,14 @@ mod tests {
         if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
             assert_eq!(triple, Some("aarch64-apple-darwin"));
         }
+    }
+
+    #[test]
+    fn android_archives_are_tarballs() {
+        assert_eq!(
+            archive_name("aarch64-linux-android"),
+            "zenx-aarch64-linux-android.tar.gz"
+        );
     }
 
     #[test]

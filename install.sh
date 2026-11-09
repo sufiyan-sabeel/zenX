@@ -66,16 +66,6 @@ if [ -n "${PREFIX:-}" ]; then
   case "$PREFIX" in *com.termux*) termux=1 ;; esac
 fi
 
-case "$os" in
-  Linux) target_os="unknown-linux-gnu" ;;
-  Darwin) target_os="apple-darwin" ;;
-  *)
-    printf 'zenx installer: unsupported operating system: %s\n' "$os" >&2
-    printf 'Windows users: run install.ps1 (see docs/installation-windows.md)\n' >&2
-    exit 1
-    ;;
-esac
-
 case "$arch" in
   x86_64|amd64) target_arch="x86_64" ;;
   aarch64|arm64) target_arch="aarch64" ;;
@@ -85,6 +75,29 @@ case "$arch" in
     exit 1
     ;;
 esac
+
+if [ "$termux" -eq 1 ]; then
+  # Termux is Android: it uses Bionic, not glibc, so a *-unknown-linux-gnu
+  # binary cannot even be loaded. Termux gets its own published artifact.
+  case "$target_arch" in
+    aarch64) target_os="linux-android" ;;
+    *)
+      printf 'zenx installer: no prebuilt Termux build for %s (only aarch64 is published)\n' "$arch" >&2
+      printf 'Build from source instead: cargo install --git https://github.com/%s zenx\n' "$REPO" >&2
+      exit 1
+      ;;
+  esac
+else
+  case "$os" in
+    Linux) target_os="unknown-linux-gnu" ;;
+    Darwin) target_os="apple-darwin" ;;
+    *)
+      printf 'zenx installer: unsupported operating system: %s\n' "$os" >&2
+      printf 'Windows users: run install.ps1 (see docs/installation-windows.md)\n' >&2
+      exit 1
+      ;;
+  esac
+fi
 
 target="${target_arch}-${target_os}"
 name="zenx-${target}"
