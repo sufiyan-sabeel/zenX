@@ -151,8 +151,22 @@ jobs:
           tar -xzf dist/zenx-aarch64-unknown-linux-gnu.tar.gz -C "$RUNNER_TEMP"
           bin="$RUNNER_TEMP/zenx-aarch64-unknown-linux-gnu/zenx"
           file "$bin" | sed 's/^/  /'
-          run_arm() { ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static -L /usr/aarch64-linux-gnu "$@"; }
-          run_arm "$bin" --version
+          QEMU=""
+          for candidate in qemu-aarch64-static qemu-aarch64; do
+            if command -v "$candidate" >/dev/null 2>&1; then QEMU="$candidate"; break; fi
+          done
+          if [ -z "$QEMU" ]; then
+            echo "no aarch64 emulator available on this runner" >&2
+            exit 1
+          fi
+          echo "emulator: $QEMU"
+          run_arm() { ZENX_HOME="$RUNNER_TEMP/home" "$QEMU" -L /usr/aarch64-linux-gnu "$@"; }
+          if ! run_arm "$bin" --version; then
+            echo "--- diagnostics ---"
+            ls -l /usr/aarch64-linux-gnu/lib/ld-linux-aarch64.so.1 || echo "loader missing"
+            echo "retrying without -L"
+            ZENX_HOME="$RUNNER_TEMP/home" "$QEMU" "$bin" --version || exit 1
+          fi
           run_arm "$bin" --help > /dev/null
           run_arm "$bin" init
           run_arm "$bin" doctor . --output json > doctor.json || true
@@ -178,8 +192,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
-            target: x86_64-apple-darwin
+          # GitHub no longer reliably provides an Intel macOS runner, so only the
+          # native arm64 artifact is executed here. The Intel build is still
+          # produced and checksummed by the artifacts job.
           - os: macos-14
             target: aarch64-apple-darwin
     steps:
