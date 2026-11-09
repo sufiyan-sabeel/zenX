@@ -53,8 +53,12 @@ cargo install --git https://github.com/sufiyan-sabeel/zenX zenx
 
 `cargo install zenx` is the intended final form; the crate name is reserved for
 it but **the package is not on crates.io yet**, so that command does not work
-today. Android/Termux needs `pkg install rust clang git` first, because SQLite is
+today.
+
+Android/Termux needs `pkg install rust clang git` first, because SQLite is
 compiled from source. Full instructions: [docs/installation.md](docs/installation.md).
+The platform matrix — what is built, what has actually been executed on a
+machine, and what has not — is in [docs/platforms.md](docs/platforms.md).
 
 ## Quick start
 
@@ -128,7 +132,8 @@ already exists.
 - [Linux](docs/installation-linux.md)
 - [macOS](docs/installation-macos.md)
 - [Windows](docs/installation-windows.md)
-- [Android and Termux](docs/installation-termux.md)
+- [Android and Termux](docs/installation-termux.md) · [Termux smoke test](docs/termux-smoke-test.md)
+- [Platform matrix](docs/platforms.md)
 - [CLI reference](docs/CLI.md)
 - [Module guide](docs/MODULES.md)
 - [Configuration](docs/CONFIGURATION.md)

@@ -8,7 +8,7 @@ your machine; nothing else is installed, and no root access is needed.
 |----------|----------|-------------------|
 | Linux x86_64 | yes | yes |
 | Linux aarch64 | yes | yes |
-| Android / Termux aarch64 | yes | yes |
+| Android / Termux aarch64 | yes (Bionic build) | yes |
 | macOS x86_64 | yes | yes |
 | macOS aarch64 (Apple Silicon) | yes | yes |
 | Windows x86_64 | yes | yes |
@@ -48,7 +48,10 @@ curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh
 
 Where it installs:
 
-- **Termux:** `$PREFIX/bin`, which is already on `PATH`.
+- **Termux:** `$PREFIX/bin`, which is already on `PATH`. Termux is Android, not
+  Linux: it uses Bionic rather than glibc, so it gets its own
+  `aarch64-linux-android` archive. A glibc build cannot load there at all, which
+  is why the installer selects the Android one when it sees Termux.
 - **Everything else:** `~/.local/bin`, which you may need to add to `PATH`.
 
 If the previous binary is replaced, the old one is kept as `zenx.old` next to it.

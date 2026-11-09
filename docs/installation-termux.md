@@ -18,8 +18,13 @@ pkg install curl tar -y
 curl -fsSL https://raw.githubusercontent.com/sufiyan-sabeel/zenX/main/install.sh | sh
 ```
 
-The script recognises Termux (through `$TERMUX_VERSION` or `$PREFIX`) and
-installs to `$PREFIX/bin`, which is already on `PATH` — no profile edit needed.
+The script recognises Termux (through `$TERMUX_VERSION` or `$PREFIX`), selects
+the `aarch64-linux-android` archive — the only one that can run against Bionic —
+and installs to `$PREFIX/bin`, which is already on `PATH`, so no profile edit is
+needed.
+
+If your device is not aarch64, the script stops and tells you to build from
+source rather than installing something that cannot run.
 
 It verifies the archive against the release's `SHA256SUMS.txt` before extracting
 it, and refuses to continue if the checksums are missing or do not match.
@@ -48,6 +53,12 @@ it twice, so check first:
 ```bash
 grep -q 'cargo/bin' ~/.bashrc || echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
 ```
+
+## Validate the install
+
+[docs/termux-smoke-test.md](termux-smoke-test.md) is a step-by-step procedure with
+the exact command and the expected output for every check, written to be run on a
+real device.
 
 ## Check the environment
 
