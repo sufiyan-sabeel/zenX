@@ -31,6 +31,9 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: zip
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+            archive: tar.gz
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -41,10 +44,26 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: android NDK toolchain
+        if: matrix.target == 'aarch64-linux-android'
+        run: |
+          set -eu
+          NDK="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          if [ -z "$NDK" ]; then
+            NDK="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/ndk/* | sort -V | tail -n1)"
+          fi
+          echo "NDK=$NDK" >> "$GITHUB_ENV"
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          echo "CC_aarch64_linux_android=$TOOLCHAIN/aarch64-linux-android21-clang" >> "$GITHUB_ENV"
+          echo "AR_aarch64_linux_android=$TOOLCHAIN/llvm-ar" >> "$GITHUB_ENV"
+          echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/aarch64-linux-android21-clang" >> "$GITHUB_ENV"
       - name: build
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
-        run: cargo build --release --workspace --target ${{ matrix.target }}
+        run: |
+          set -eu
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          cargo build --release --workspace --target ${{ matrix.target }}
       - name: package (unix)
         if: matrix.archive == 'tar.gz'
         shell: bash
@@ -102,7 +121,7 @@ jobs:
           # --version skips the "is it newer" gate, so this exercises the real
           # download + SHA-256 verification path without replacing the binary.
           ZENX_RELEASE_BASE_URL="file://$PWD/dist" ZENX_HOME="$RUNNER_TEMP/home" \
-            "$RUNNER_TEMP/bin/zenx" update --version v9.9.9 --dry-run --output json \
+            "$RUNNER_TEMP/bin/zenx" update --tag v9.9.9 --dry-run --output json \
             > "$RUNNER_TEMP/update.json"
           grep -q '"verified": true' "$RUNNER_TEMP/update.json"
           grep -q '"action": "verified"' "$RUNNER_TEMP/update.json"
@@ -110,6 +129,8 @@ jobs:
   release:
     name: publish release
     needs: [build, verify-installer]
+    # A dispatch on a branch must never create a release: only a v* tag may.
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -124,7 +145,6 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
           body: |
             zenX ${{ github.ref_name }}
 
