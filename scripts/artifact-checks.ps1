@@ -41,7 +41,9 @@ if ($missing.Count -eq 0) { Pass "--help lists every command" } else { Fail "--h
 $doctor = (& $Binary doctor . --output json) -join "`n"
 if ($doctor -match '"checks"') { Pass "doctor emitted a JSON report" } else { Fail "doctor did not emit JSON" }
 
-$env:ZENX_RELEASE_BASE_URL = $release
+# The updater accepts https:// and file:// URLs only, so hand it a URL rather
+# than a bare Windows path.
+$env:ZENX_RELEASE_BASE_URL = "file:///" + ($release -replace '\\', '/')
 $check = (& $Binary update --check --tag v9.9.9 --output json) -join "`n"
 if ($check -match '"action": "available"') { Pass "update --check reports an available release" } else { Fail "update --check: $check" }
 
@@ -62,7 +64,12 @@ if ($install -match '"action": "installed"' -and (Test-Path "$Binary.old")) {
 }
 
 & $Binary update --rollback | Out-Null
-if (-not (Test-Path "$Binary.old")) { Pass "update --rollback restored the previous binary" } else { Fail "update --rollback" }
+$rollbackExit = $LASTEXITCODE
+if ($rollbackExit -eq 0 -and -not (Test-Path "$Binary.old")) {
+    Pass "update --rollback restored the previous binary"
+} else {
+    Fail "update --rollback (exit $rollbackExit)"
+}
 
 $plan = (& $Binary uninstall --output json) -join "`n"
 $db = Join-Path $env:ZENX_HOME "zenx.db"
