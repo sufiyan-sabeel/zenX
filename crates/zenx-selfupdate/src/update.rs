@@ -147,7 +147,17 @@ fn install_binary(exe: &Path, new_binary: &Path) -> Result<PathBuf> {
 
     let backup = sibling(exe, "old");
     if exe.exists() {
-        std::fs::copy(exe, &backup).map_err(|error| ZenxError::io(&backup, error))?;
+        #[cfg(windows)]
+        {
+            // Windows refuses to overwrite or delete a running executable, but
+            // it does allow renaming it, which frees the name for the new file.
+            let _ = std::fs::remove_file(&backup);
+            std::fs::rename(exe, &backup).map_err(|error| ZenxError::io(&backup, error))?;
+        }
+        #[cfg(not(windows))]
+        {
+            std::fs::copy(exe, &backup).map_err(|error| ZenxError::io(&backup, error))?;
+        }
     }
     std::fs::rename(&staged, exe).map_err(|error| {
         let _ = std::fs::remove_file(&staged);
@@ -277,6 +287,14 @@ pub fn rollback() -> Result<PathBuf> {
             "no previous binary at {}; nothing to roll back",
             backup.display()
         )));
+    }
+    #[cfg(windows)]
+    {
+        // The running executable cannot be replaced, so it is moved aside first
+        // and left as `<name>.new` for the next update to reuse.
+        let parked = sibling(&exe, "new");
+        let _ = std::fs::remove_file(&parked);
+        std::fs::rename(&exe, &parked).map_err(|error| ZenxError::io(&parked, error))?;
     }
     std::fs::rename(&backup, &exe).map_err(|error| ZenxError::io(&exe, error))?;
     Ok(exe)

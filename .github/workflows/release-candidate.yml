@@ -146,19 +146,22 @@ jobs:
       - name: run the arm64 binary under emulation
         run: |
           set -eu
+          # qemu needs the arm64 glibc loader, not just the emulator.
+          sudo apt-get install -y libc6-arm64-cross
           tar -xzf dist/zenx-aarch64-unknown-linux-gnu.tar.gz -C "$RUNNER_TEMP"
           bin="$RUNNER_TEMP/zenx-aarch64-unknown-linux-gnu/zenx"
           file "$bin" | sed 's/^/  /'
-          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" --version
-          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" --help > /dev/null
-          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" init
-          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" doctor . --output json > doctor.json || true
+          run_arm() { ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static -L /usr/aarch64-linux-gnu "$@"; }
+          run_arm "$bin" --version
+          run_arm "$bin" --help > /dev/null
+          run_arm "$bin" init
+          run_arm "$bin" doctor . --output json > doctor.json || true
           grep -q '"checks"' doctor.json
       - name: the installer selects the arm64 artifact
         run: |
           set -eu
           mkdir -p fakebin
-          printf '#!/bin/sh\necho aarch64\n' > fakebin/uname
+          printf '#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo aarch64 ;; *) echo Linux ;; esac\n' > fakebin/uname
           chmod +x fakebin/uname
           # The installer must choose the arm64 archive. Running the result is
           # expected to fail on an x86_64 host, so only the selection is asserted.
@@ -261,13 +264,17 @@ jobs:
       - name: the installer picks the android artifact on Termux
         run: |
           set -eu
-          # A stand-in archive with the android name, holding a host binary, so
-          # the selection logic is tested without executing an ARM binary.
+          # Termux reports aarch64; the host is x86_64, so uname is faked. A
+          # stand-in archive with the android name lets the selection logic run
+          # without executing an ARM binary.
+          mkdir -p fakebin
+          printf '#!/bin/sh\ncase "$1" in -s) echo Linux ;; -m) echo aarch64 ;; *) echo Linux ;; esac\n' > fakebin/uname
+          chmod +x fakebin/uname
           mkdir -p stand-in/zenx-aarch64-linux-android
           cp "$(command -v sh)" stand-in/zenx-aarch64-linux-android/zenx
           tar -C stand-in -czf dist/zenx-aarch64-linux-android.tar.gz zenx-aarch64-linux-android
           ( cd dist && sha256sum zenx-aarch64-linux-android.tar.gz > SHA256SUMS.txt )
-          TERMUX_VERSION=0.118 PREFIX=/data/data/com.termux/files/usr \
+          PATH="$PWD/fakebin:$PATH" TERMUX_VERSION=0.118 PREFIX=/data/data/com.termux/files/usr \
             ZENX_RELEASE_BASE_URL="file://$PWD/dist" \
             sh ./install.sh --dir "$RUNNER_TEMP/termux" 2>&1 | tee termux.log || true
           grep -q "platform aarch64-linux-android" termux.log

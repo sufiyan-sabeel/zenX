@@ -67,9 +67,31 @@ pub fn uninstall(options: &UninstallOptions) -> Result<UninstallReport> {
         )),
         InstallMethod::Binary { .. } => {
             if options.confirm {
-                std::fs::remove_file(&exe).map_err(|error| ZenxError::io(&exe, error))?;
-                binary_removed = true;
-                notes.push(format!("removed {}", exe.display()));
+                match std::fs::remove_file(&exe) {
+                    Ok(()) => {
+                        binary_removed = true;
+                        notes.push(format!("removed {}", exe.display()));
+                    }
+                    // Windows will not delete a running program. Renaming it is
+                    // allowed and takes it off PATH, so report exactly that
+                    // rather than claiming a deletion that did not happen.
+                    Err(error) if cfg!(windows) => {
+                        let name = exe
+                            .file_name()
+                            .map(|name| name.to_string_lossy().to_string())
+                            .unwrap_or_else(|| "zenx".to_string());
+                        let parked = exe.with_file_name(format!("{name}.old"));
+                        std::fs::rename(&exe, &parked).map_err(|_| {
+                            ZenxError::io(&exe, error)
+                        })?;
+                        binary_removed = true;
+                        notes.push(format!(
+                            "renamed the running executable to {} because Windows cannot delete it while it runs; delete that file after this shell exits",
+                            parked.display()
+                        ));
+                    }
+                    Err(error) => return Err(ZenxError::io(&exe, error)),
+                }
             } else {
                 notes.push(format!(
                     "would remove {} (pass --yes to do it)",
