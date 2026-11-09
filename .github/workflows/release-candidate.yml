@@ -1,0 +1,295 @@
+name: Release candidate
+
+# Builds every artifact the v0.1.0 release would publish, then exercises each
+# one end to end. Nothing here tags, publishes or creates a release: this is the
+# evidence-gathering workflow that runs before anyone is asked to approve one.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "install.sh"
+      - "install.ps1"
+      - "scripts/artifact-checks.*"
+      - ".github/workflows/release-candidate.yml"
+      - "crates/zenx-selfupdate/**"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  artifacts:
+    name: build artifact ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+            archive: tar.gz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+      - name: cross linker for aarch64 linux
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: android NDK toolchain
+        if: matrix.target == 'aarch64-linux-android'
+        run: |
+          set -eu
+          NDK="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          if [ -z "$NDK" ]; then
+            NDK="$(ls -d "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/ndk/* | sort -V | tail -n1)"
+          fi
+          TOOLCHAIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          {
+            echo "CC_aarch64_linux_android=$TOOLCHAIN/aarch64-linux-android21-clang"
+            echo "AR_aarch64_linux_android=$TOOLCHAIN/llvm-ar"
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$TOOLCHAIN/aarch64-linux-android21-clang"
+          } >> "$GITHUB_ENV"
+      - name: build (exactly as the release workflow does)
+        run: |
+          set -eu
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          cargo build --release --workspace --target ${{ matrix.target }}
+        shell: bash
+      - name: package (unix)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          set -eu
+          name="zenx-${{ matrix.target }}"
+          mkdir -p "dist/$name"
+          cp "target/${{ matrix.target }}/release/zenx" "dist/$name/"
+          cp README.md LICENSE CHANGELOG.md "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          ( cd dist && sha256sum "$name.tar.gz" > SHA256SUMS.txt )
+          cat dist/SHA256SUMS.txt
+      - name: package (windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $name = "zenx-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force -Path "dist/$name" | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/zenx.exe" "dist/$name/"
+          Copy-Item README.md,LICENSE,CHANGELOG.md "dist/$name/"
+          Compress-Archive -Path "dist/$name" -DestinationPath "dist/$name.zip" -Force
+          $hash = (Get-FileHash -Algorithm SHA256 -Path "dist/$name.zip").Hash.ToLower()
+          "$hash  $name.zip" | Out-File -Encoding ascii "dist/SHA256SUMS.txt"
+          Get-Content dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}
+          path: dist/*
+
+  runtime-linux-x86_64:
+    name: runtime test linux x86_64
+    needs: artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-x86_64-unknown-linux-gnu
+          path: dist
+      - name: verify the published checksum
+        run: ( cd dist && sha256sum -c SHA256SUMS.txt )
+      - name: install with the shipped installer
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" sh ./install.sh --dir "$RUNNER_TEMP/bin"
+      - name: nine checks against the installed binary
+        run: bash scripts/artifact-checks.sh "$RUNNER_TEMP/bin/zenx" "$PWD/dist"
+
+  runtime-linux-aarch64:
+    name: runtime test linux aarch64 (emulated)
+    needs: artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-aarch64-unknown-linux-gnu
+          path: dist
+      - name: verify the published checksum
+        run: ( cd dist && sha256sum -c SHA256SUMS.txt )
+      - name: install qemu user emulation
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y qemu-user-static
+      - name: run the arm64 binary under emulation
+        run: |
+          set -eu
+          tar -xzf dist/zenx-aarch64-unknown-linux-gnu.tar.gz -C "$RUNNER_TEMP"
+          bin="$RUNNER_TEMP/zenx-aarch64-unknown-linux-gnu/zenx"
+          file "$bin" | sed 's/^/  /'
+          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" --version
+          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" --help > /dev/null
+          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" init
+          ZENX_HOME="$RUNNER_TEMP/home" qemu-aarch64-static "$bin" doctor . --output json > doctor.json || true
+          grep -q '"checks"' doctor.json
+      - name: the installer selects the arm64 artifact
+        run: |
+          set -eu
+          mkdir -p fakebin
+          printf '#!/bin/sh\necho aarch64\n' > fakebin/uname
+          chmod +x fakebin/uname
+          # The installer must choose the arm64 archive. Running the result is
+          # expected to fail on an x86_64 host, so only the selection is asserted.
+          PATH="$PWD/fakebin:$PATH" ZENX_RELEASE_BASE_URL="file://$PWD/dist" \
+            sh ./install.sh --dir "$RUNNER_TEMP/bin" 2>&1 | tee install.log || true
+          grep -q "platform aarch64-unknown-linux-gnu" install.log
+          grep -q "zenx-aarch64-unknown-linux-gnu.tar.gz" install.log
+
+  runtime-macos:
+    name: runtime test macOS (${{ matrix.os }})
+    needs: artifacts
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-13
+            target: x86_64-apple-darwin
+          - os: macos-14
+            target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}
+          path: dist
+      - name: the runner architecture matches the artifact
+        run: |
+          set -eu
+          echo "runner: $(uname -m), artifact: ${{ matrix.target }}"
+          case "$(uname -m)" in
+            arm64) [ "${{ matrix.target }}" = "aarch64-apple-darwin" ] ;;
+            x86_64) [ "${{ matrix.target }}" = "x86_64-apple-darwin" ] ;;
+            *) echo "unexpected runner architecture"; exit 1 ;;
+          esac
+      - name: verify the published checksum
+        run: ( cd dist && shasum -a 256 -c SHA256SUMS.txt )
+      - name: install with the shipped installer
+        run: |
+          set -eu
+          ZENX_RELEASE_BASE_URL="file://$PWD/dist" sh ./install.sh --dir "$RUNNER_TEMP/bin"
+      - name: nine checks against the installed binary
+        run: bash scripts/artifact-checks.sh "$RUNNER_TEMP/bin/zenx" "$PWD/dist"
+
+  runtime-windows:
+    name: runtime test windows x86_64
+    needs: artifacts
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-x86_64-pc-windows-msvc
+          path: dist
+      - name: verify the published checksum
+        shell: pwsh
+        run: |
+          $line = Get-Content "dist/SHA256SUMS.txt"
+          $expected = ($line -split '\s+')[0].ToLower()
+          $actual = (Get-FileHash -Algorithm SHA256 -Path "dist/zenx-x86_64-pc-windows-msvc.zip").Hash.ToLower()
+          if ($expected -ne $actual) { throw "checksum mismatch: $expected vs $actual" }
+          Write-Host "checksum verified: $actual"
+      - name: install with the shipped installer
+        shell: pwsh
+        run: |
+          $env:ZENX_RELEASE_BASE_URL = "$PWD/dist"
+          ./install.ps1 -Dir "$env:RUNNER_TEMP\bin"
+      - name: nine checks against the installed binary
+        shell: pwsh
+        run: ./scripts/artifact-checks.ps1 -Binary "$env:RUNNER_TEMP\bin\zenx.exe" -Dist "$PWD/dist"
+
+  termux-packaging:
+    name: Termux artifact packaging
+    needs: artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist-aarch64-linux-android
+          path: dist
+      - name: verify the published checksum
+        run: ( cd dist && sha256sum -c SHA256SUMS.txt )
+      - name: the archive has the layout the installer expects
+        run: |
+          set -eu
+          tar -tzf dist/zenx-aarch64-linux-android.tar.gz
+          tar -tzf dist/zenx-aarch64-linux-android.tar.gz | grep -qx "zenx-aarch64-linux-android/zenx"
+      - name: the binary is Bionic, not glibc
+        run: |
+          set -eu
+          tar -xzf dist/zenx-aarch64-linux-android.tar.gz -C "$RUNNER_TEMP"
+          bin="$RUNNER_TEMP/zenx-aarch64-linux-android/zenx"
+          file "$bin"
+          if readelf -d "$bin" | grep -q 'libc\.so\.6'; then
+            echo "error: android artifact links against glibc" >&2
+            exit 1
+          fi
+          echo "no glibc dependency, as required for Termux"
+      - name: the installer picks the android artifact on Termux
+        run: |
+          set -eu
+          # A stand-in archive with the android name, holding a host binary, so
+          # the selection logic is tested without executing an ARM binary.
+          mkdir -p stand-in/zenx-aarch64-linux-android
+          cp "$(command -v sh)" stand-in/zenx-aarch64-linux-android/zenx
+          tar -C stand-in -czf dist/zenx-aarch64-linux-android.tar.gz zenx-aarch64-linux-android
+          ( cd dist && sha256sum zenx-aarch64-linux-android.tar.gz > SHA256SUMS.txt )
+          TERMUX_VERSION=0.118 PREFIX=/data/data/com.termux/files/usr \
+            ZENX_RELEASE_BASE_URL="file://$PWD/dist" \
+            sh ./install.sh --dir "$RUNNER_TEMP/termux" 2>&1 | tee termux.log || true
+          grep -q "platform aarch64-linux-android" termux.log
+          grep -q "aarch64-linux-android.tar.gz" termux.log
+
+  summary:
+    name: matrix summary
+    needs: [artifacts, runtime-linux-x86_64, runtime-linux-aarch64, runtime-macos, runtime-windows, termux-packaging]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: report
+        run: |
+          {
+            echo "### Release candidate artifact matrix"
+            echo ""
+            echo "| Job | Result |"
+            echo "|-----|--------|"
+            echo "| build artifacts | ${{ needs.artifacts.result }} |"
+            echo "| runtime linux x86_64 | ${{ needs['runtime-linux-x86_64'].result }} |"
+            echo "| runtime linux aarch64 (emulated) | ${{ needs['runtime-linux-aarch64'].result }} |"
+            echo "| runtime macOS | ${{ needs['runtime-macos'].result }} |"
+            echo "| runtime windows x86_64 | ${{ needs['runtime-windows'].result }} |"
+            echo "| termux packaging | ${{ needs['termux-packaging'].result }} |"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
