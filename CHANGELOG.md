@@ -6,8 +6,13 @@ All notable changes to zenX are recorded here. The format follows
 
 ## [Unreleased]
 
-### Added
+Nothing yet.
 
+## [0.1.0] - 2026-11-09
+
+First release candidate.
+
+### Added
 - `install.sh` at the repository root, usable as
   `curl -fsSL .../install.sh | sh`. Detects OS and architecture, refuses
   unsupported platforms, verifies the archive against the release's
@@ -15,7 +20,7 @@ All notable changes to zenX are recorded here. The format follows
   and can write an idempotent `PATH` line with `--set-path`.
 - `install.ps1` for Windows: same fail-closed checksum verification through
   `Get-FileHash`, installs to `%LOCALAPPDATA%\zenX\bin`, optional `-SetPath`.
-- `zenx update` with `--check`, `--version`, `--dry-run` and `--rollback`.
+- `zenx update` with `--check`, `--tag`, `--dry-run` and `--rollback`.
   Downloads only over HTTPS, verifies SHA-256 before unpacking, replaces only a
   file named `zenx`, and defers to cargo when zenX was installed with cargo.
 - `zenx uninstall`, which reports its plan first, deletes only the zenX
@@ -31,17 +36,13 @@ All notable changes to zenX are recorded here. The format follows
   verifies the installer against the real artifacts before publishing.
 - Installation documentation: `docs/installation.md` and per-platform guides for
   Linux, macOS, Windows and Termux.
+- A published `aarch64-linux-android` artifact, because Termux uses Bionic and
+  cannot load a glibc build; `install.sh` and `zenx update` select it on Termux.
+- `scripts/verify-metadata.py`, which checks crate names, versions, internal
+  dependency versions and the crates.io publication order.
 
-### Changed
 
-- `docs/INSTALL.md` and `docs/TERMUX.md` were replaced by the guides above.
-
-## [0.1.0]
-
-First working release.
-
-### Added
-
+### Installation and distribution
 - Unified `zenx` CLI with consistent exit codes and `--output json` on every
   command.
 - `zenx-core`: versioned TOML configuration, unified error type, path
@@ -72,8 +73,11 @@ First working release.
 - CI for Linux, macOS and Windows, an aarch64 cross-build, release workflow
   with SHA-256 checksums, and an installer script.
 
-### Known limitations
+### Changed
 
+- `docs/INSTALL.md` and `docs/TERMUX.md` were replaced by the guides above.
+
+### Known limitations
 - No dashboard yet; `zenx status` reports it as planned.
 - Only the zenX JSONL trace adapter exists.
 - `zenx skills update` requires git; local installs cannot be updated in place.
